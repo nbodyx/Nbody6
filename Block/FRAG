@@ -1,0 +1,58 @@
+*       See whether to advance any KS solutions at start of block-step.
+    1 IF (NPAIRS.GT.0) THEN
+*     Obtain list of all KS pairs due in interval DTB.
+          IF (TBLIST.LE.TBLOCK.OR.NPAIRS.NE.NBPREV) THEN
+              IF (DTB.EQ.0.0D0.OR.DTB.GT.1.0D+06) THEN
+                  DTB = MAX(DTMIN,TBLOCK - TPREV)
+              END IF
+    2         TBLIST = TPREV + DTB
+              TBLIST = MAX(TBLOCK,TBLIST)
+              NNTB = 0
+              DO 3 JPAIR = 1,NPAIRS
+                  J1 = 2*JPAIR - 1
+                  IF (T0(J1) + STEP(J1).LE.TBLIST) THEN
+                      NNTB = NNTB + 1
+                      KBLIST(NNTB) = J1
+                      TSLIST(NNTB) = T0(J1) + STEP(J1)
+                  END IF
+    3         CONTINUE
+*       Increase interval on zero membership.
+              IF (NNTB.EQ.0) THEN
+                  DTB = 2.0*DTB
+                  GO TO 2
+              END IF
+*       Stabilize interval on membership of 2*SQRT(NPAIRS).
+              NBTRY = 2*SQRT(FLOAT(NPAIRS))
+              IF (NNTB.GT.NBTRY)  DTB = 0.75*DTB
+              IF (NNTB.LT.NBTRY)  DTB = 1.25*DTB
+          END IF
+*
+*       Determine quantized value of TMIN (next small block-step).
+    5     TMIN = TBLOCK
+          NK = 0
+          DO 4 L = 1,NNTB
+              I1 = KBLIST(L)
+*             IF (T0(I1) + STEP(I1).LE.TBLOCK) THEN
+              IF (TSLIST(I1).LE.TBLOCK) THEN
+                  NK = NK + 1
+                  LISTKS(NK) = I1
+              END IF
+    4     CONTINUE
+          IF (NK.EQ.0) GO TO 60
+*
+          DO 6 L = 1,NK
+            I1 = LISTKS(L)
+            TMIN = MIN(TSLIST(I1),TMIN)
+    6     CONTINUE
+*
+*       Update time and form list of binaries due at TMIN.
+          TIME = TMIN
+          LENGTH = 0
+          DO 8 L = 1,NK
+            I1 = LISTKS(L)
+            IF (T0(I1) + STEP(I1).EQ.TMIN) THEN
+              LENGTH = LENGTH + 1
+              NEXTL(LENGTH) = I1
+            END IF
+    8     CONTINUE
+*

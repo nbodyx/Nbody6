@@ -1,0 +1,7 @@
+Keigo made a new GPU function 9 Feb 2012: gpuirr.sse.cpp.get_list
+Its use is as follows:
+Replace gpuirr.sse.cpp;
+In intgrt.omp.f, define INTEGER KTMP(LMAX)
+At desired place: CALL GPUIRR_GET+LIST(I,KTMP)
+The GPU neighbour list for #I is then given by KTMP.
+This was used in a bug hunt which did not yield anything.

@@ -1,0 +1,197 @@
+========================================
+ GPU extension for NBODY6 ver. 2.1
+                   22 Aug. 2010, 20 Jan. 2011
+ Keigo Nitadori (keigo@riken.jp) 
+               and
+ Sverre Aarseth (sverre@ast.cam.ac.uk)
+========================================
+
+1. About
+ This is a new library package for enhancing the performance of NBODY6.
+The regular force calculation is accelerated by the use of GPU, whereas
+the irregular force calculation is accelerated by the SSE instruction set
+of x86 CPU and OpenMP for the efficient use of multiple cores.
+Some of the important subroutines of the original NBODY6 are modified
+and libraries written in C++ or CUDA are added.
+
+2. System requirement
+ This module is intended for use on a Linux x86_64 PC with CUDA enabled GPU.
+However, one can try to run it on Macintosh/Linux-32bit/Windows.
+
+ 2-1. Hardware
+  CPU : x86_64 with SSE3 support (from the 90nm generation for Intel/AMD).
+  GPU : NVIDA GeForce/Tesla with CUDA support. GT200 or Fermi generation.
+ 2-2. Software
+  OS       : Any Linux for x86_64 where you can install CUDA environment.
+  Compiler : GCC 4.1.2 or later with OpenMP enabled. 
+             C++ and FORTRAN support is required.
+  CUDA     : Toolkit and SDK 3.0 or later. SDK is only relevant for 'cutil.h'.
+
+For reference, we list the environment used for development.
+ CPU      : Core i7 920
+ GPU      : Two GeForce GTX 470
+ OS       : CentOS 5.5 for x86_64
+ Compiler : GCC 4.1.2 (with C++ and FORTRAN)
+ CUDA     : Toolkit and SDK 3.1
+
+ Note that one CPU socket (4 or 6 cores) for one (Fermi generation) GPU looks 
+a well balanced combination. The regular force part is easily accelerated 
+with GPU. However, the irregular force part is not easily accelerated on
+the GPU and is now performed on the host with the help of SSE and OpenMP.
+ Some suggestions for hardware configuration:
+ Entry choice   ( $1,000): One Core i7 870 (Lynfield)    + one GeForce GTX 460 (GF104)
+ High-end choice($10,000): Two Xeon X5680  (Westmere-EP) + two Tesla C2050     (GF100)
+
+3. Installation
+ Extract the file 'gpu2.tar.gz' in the directory 'Nbody6'.
+After extracting, the directory structure would look as follows:
+
+Nbody6 +
+       |-Ncode            : Original NBODY6
+       |-GPU2  +          : Makefile and FORTRAN files
+       |       |-lib      : Regular-force library (in CUDA)
+       |       |-irrlib   : Irregular-force library (in C++)
+       |       |-run
+       |-Nchain
+       |-...
+
+Go to the directory 'GPU2',
+ > cd GPU2
+and execute the shell script
+ > ./install.sh
+to make symbolic links of 'params.h' and 'common6.h'.
+Then, just make it
+ > make gpu
+to obtain the executable 'nbody6.gpu' in the directory 'run'.
+
+4. GPU dependent parameters
+ Some parameters need to be given at compile time to adjust the number of
+thread blocks to the physical number of processors of the GPU used.
+These values are defined in the file 'GPU2/lib/gpunb.reduce.cu', and some
+examples are:
+ for GeForce GTX 460/470 or Tesla C2050,
+  #define NJBLOCK  14
+  #define NXREDUCE 16
+ or,
+  #define NJBLOCK  28
+  #define NXREDUCE 32
+ for GeForce GTX 280 or Tesla C1060,
+  #define NJBLOCK  30
+  #define NXREDUCE 32
+ etc...
+ One compiler option needs to be modified, depending on the GPU generation.
+Edit the file 'GPU/Makefie' on the line
+  NVCC += -arch sm_20 -Xptxas -dlcm=cg
+For GTX 280 or C1060, it should be 'sm_13' and for GTX 460, 'sm_21'.
+
+5. Environment variables
+ By default, the library automatically finds and uses all the GPUs installed 
+and all the CPU threads. In case you want to run multiple jobs on one PC 
+with multiple GPUs, you need to specify the list of GPUs and the number
+of CPU threads. For example, if 2 GPUs and 8 host threads are available, 
+two jobs can be run by:
+ > GPU_LIST="0" OMP_NUM_THREADS=4 ../nbody6.gpu < in1 > out1 &
+ > GPU_LIST="1" OMP_NUM_THREADS=4 ../nbody6.gpu < in2 > out2 &
+The default is equivalent to,
+ > GPU_LIST="0 1" OMP_NUM_THREADS=8 ../nbody6.gpu < in > out &
+
+6. Output
+Each regular or irregular library outputs some message to the screen (stderr)
+when it is opened and closed. At the close time, both of the libraries give
+some profiling information. An example of the output to the screen is as
+follows:
+
+***********************
+Initializing NBODY6/GPU library
+#CPU 8, #GPU 2
+ device: 0 1
+ device 0: GeForce GTX 470
+ device 1: GeForce GTX 470
+***********************
+***********************
+Opened NBODY6/GPU library
+#CPU 8, #GPU 2
+ device: 0 1
+ 0 32768 65536
+nbmax = 65536
+***********************
+**************************** 
+Opening GPUIRR lib. SSE ver. 
+ nmax = 65546, lmax = 500
+**************************** 
+***********************
+Closed NBODY6/GPU library
+time send   : 1.101684 sec
+time grav   : 17.795590 sec
+time reduce : 0.387609 sec
+1315.947465 Gflops (gravity part only)
+***********************
+**************************** 
+Closing GPUIRR lib. CPU ver. 
+time pred  : 8.766780 sec
+time pact  : 9.664287 sec
+time grav  : 19.304246 sec
+time onep  : 0.000000 sec
+
+perf grav  : 20.604658 Gflops
+perf pred  : 8.123547 nsec
+perf pact  : 125.747625 nsec
+**************************** 
+
+7. Performance tuning using HUGEPAGE
+ The default page size of x86 architecture is 4kB, which sometimes causes a
+performance loss in HPC (high performance computing) applications.
+Recent x86 CPUs and Linux kernel support larger page (huge page) whose size 
+is 2MB.
+ We have seen that the use of huge page improves the performance and 
+describe the way to set up.
+
+(i)  Install 'libhugetlbfs' package
+ For CentOS 5.5, just type (as superuser),
+ > yum install libhugetlbfs*
+
+(ii) Allocate huge pages
+ For NBODY6, 512 pages = 1 GB would be sufficient allocation, if N < 100k.
+To allocate, type as superuser,
+ > echo 512 > /proc/sys/vm/nr_hugepages
+ It is recommended to write it in the boot sequence script (/etc/rc.local)
+for safe allocation.
+ You can check the allocation status with the command
+ > grep Huge /proc/meminfo
+to obtain, 
+  HugePages_Total:   512
+  HugePages_Free:    512
+  HugePages_Rsvd:      0
+  Hugepagesize:     2048 kB
+
+(iii) Mount the filesystem
+ You need to mount hugetlbfs to some mount point (any mount point will do).
+Here, we just show an example line for 'fstab'.
+  hugetlbfs		/libhugetlbfs		huge tlbfs	mode=0777	0 0
+
+(iv) Compiling NBODY6
+ NBODY6 needs to be re-linked to put the common arrays on the huge-page.
+Comment out the following line from 'GPU2/Makefile_gpu' and link again.
+  #LD_GPU += -B /usr/share/libhugetlbfs -Wl,--hugetlbfs-link=B
+
+(v)  Environment variable
+ The following environment variable should be set to get the dynamically
+allocated memory from the huge pages:
+  HUGETLB_MORECORE=yes
+
+(vi) Run and watch
+ While the program is running, you can watch the use of huge pages:
+ > grep Huge /proc/meminfo
+
+8. Conclusion
+ Significant speed-up has been achieved from the previously released version.
+The bottleneck of the old version with an accelerated regular force
+calculation on the GPU was the remaining part performed on the host CPU.
+The iregular force, predictor and corrector part have been fine-tuned with
+SSE and OpenMP. 
+ Provisional timing tests have been carried out. Compared with the previous
+version (Aug. 2010), the speed-up is at least a factor of 2 for N=64k or N=100k. 
+Based on the system presented in section 3 with 2 GPUs, typical wall-clock
+time from T=0 to T=2 (excluding the initialization) is 74 sec for N=64k and
+160 sec for N=100k. For predictions at regular force times we use the scalar
+version of cxvpred.cpp which is nearly twice as fast as the SSE version.

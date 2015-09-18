@@ -1,0 +1,2 @@
+cxvpred.cpp.full is the original procedure for predicting all particles.
+It was replaced 13/1/11 by a scalar version which excludes TPRED(I)=TIME.

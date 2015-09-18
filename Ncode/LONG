@@ -1,0 +1,5 @@
+*       Consider merger for PMIN > SEMI and large semi-major axis ratio.
+          IF (PMIN.GT.SEMI.AND.SEMI2.GT.20.0*SEMI0.AND.
+     &        1.0/SEMI.LT.0.5/RMIN) GO TO 30
+*       Do not allow negative SEMI or soft cross section.
+          IF (1.0/SEMI.LT.0.5/RMIN.AND.PMIN.GT.2.0*SEMI) GO TO 100

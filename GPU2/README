@@ -1,0 +1,110 @@
+INSTALLATION NOTES FOR LATEST NBODY6
+
+1. Updates
+We added support for AVX.
+'Makefile*' files were changed and cleaned up.
+
+2. Installation
+(a) For users with AVX support:
+Just type
+ $ make gpu
+to generate the executable ./run/nbody6.gpu
+of which the regular force part is accelerated by GPU
+or
+ $ make avx
+to generate the executable ./run/nbody6.avx
+that runs without GPU but both the regular and
+irregular force part is tuned for AVX.
+In both versions, AVX is used for the irregular
+force part.
+
+(b) For users without AVX support:
+Edit the first line of Makefile to comment it out as
+#avx       = enable
+Then type
+ $ make gpu
+to generate the executable ./run/nbody6.gpu
+or
+ $ make sse
+to generate the executable ./run/nbody6.sse
+
+3. Modifications
+If you are not lucky, you need some modifications
+of Makefile.
+(1) If the CUDA version is less than 5, comment out the line
+      NVCC += -DWITH_CUDA5
+(2) SDK_PATH needs to be set such that 'cutil.h' ('helper_cuda.h'
+    in CUDA 5) is found.
+(3) If your GPU generation is before Kepler, the option
+    -arch=sm_30 needs to be changed to a relevant value.
+(4) If 'libhugetlbfs' is not installed or you don't
+    want to use huge-pages, comment out the line in Makefile.ncode:
+      LD_GPU += -B /usr/share/libhugetlbfs -Wl,--hugetlbfs-align
+    For older version of libhugetlbfs, the linker option may be
+      LD_GPU += -B /usr/share/libhugetlbfs -Wl,--hugetlbfs-link=B
+    If you use huge-pages, set three environment variables:
+      HUGETLB_VERBOSE='2'
+      HUGETLB_ELFMAP='W'
+      HUGETLB_MORECORE='yes'
+
+4. For big N simulations
+We added '-fPIC' option for successful compilation when a big
+NMAX (> 100k) is set in 'params.h'.
+With big N, it can cause a stack overflow and segmentation fault.
+In such cases, you can increase the stack size with 'ulimit -s'
+command in BASH or 'limit stacksize' in TCSH.
+Just type
+ $ ulimit -s
+which returns the current value in KB (maybe 10240).
+And you can increase it by
+ $ ulimit -s 20480
+or alternatively 'limit stacksize 20480' or more for TCSH.
+
+5. Current environment at IoA Cambridge:
+CPU      : Core i5-3570 (4 cores, 3.4 GHz)
+GPU      : One GeForce GTX 660Ti (7 SMXs, 1344 CUDA cores)
+OS       : CentOS 6.4 for x86_64
+Compiler : GCC 4.4.7 (default of CentOS)
+CUDA     : CUDA 5.0 Production Release
+
+Here is screen a shot of this configuration integrating
+64k stars from t=0 to t=2.
+
+***********************
+Initializing NBODY6/GPU library
+#CPU 4, #GPU 1
+ device: 0
+ device 0: GeForce GTX 660 Ti
+***********************
+***********************
+Opened NBODY6/GPU library
+#CPU 4, #GPU 1
+ device: 0
+ 0 65546
+nbmax = 65546
+***********************
+**************************** 
+Opening GPUIRR lib. AVX ver. 
+ nmax = 65546, lmax = 500
+**************************** 
+
+***********************
+Closed NBODY6/GPU library
+time send   : 0.875775 sec
+time grav   : 20.004446 sec
+time reduce : 0.271385 sec
+time regtot : 21.151606 sec
+1164.470114 Gflops (gravity part only)
+***********************
+**************************** 
+Closing GPUIRR lib. CPU ver. 
+time grav  : 17.729413 sec
+
+perf grav  : 21.715221 Gflops
+perf grav  : 163.998749 usec
+<#NB>      : 76.406419 
+**************************** 
+
+
+Keigo Nitadori
+April 2013

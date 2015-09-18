@@ -1,0 +1,5 @@
+The library function gpuirr_debug... can be called with arg (I,J)
+to give the coordinate separation (hack off 'xdiff').
+
+Likewise the one called 'force.cpp' has same name and
+prints force components exceeding a specified value (like 2D+04).

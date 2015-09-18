@@ -1,0 +1,2 @@
+          IF ((RIJ.GT.MAX(3.0*RGRAV,RMIN).OR.RSUM.GT.2.0*RMIN).AND.
+     &        PMIN.GT.2.0*RMIN) GO TO 30

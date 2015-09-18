@@ -1,0 +1,8 @@
+        function atn2(s,c)
+        implicit real*8 (a-h,o-z)
+        parameter(twopi=2*3.141592653589793d0)
+        save
+        atn2=atan2(s,c)
+        if(atn2.lt.0.0)atn2=atn2+twopi
+        return
+        end

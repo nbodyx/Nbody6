@@ -1,0 +1,219 @@
+\documentclass[12pt]{article}
+\pagestyle{plain}
+\setlength {\topmargin} {-1.0cm}
+\setlength {\textwidth} {16.0cm}
+\setlength {\textheight} {24cm}
+%\voffset -1cm
+\pagestyle{empty}
+\setlength {\oddsidemargin} {0cm}
+\begin{document}
+
+\centerline {\Large {\bf {SSE/AVX and GPU2 with NBODY6}}}
+\bigskip
+\bigskip
+\centerline {\Large {Keigo Nitadori and Sverre Aarseth~~~}}
+\bigskip
+\medskip
+\bigskip
+We provide some notes on the use of the SSE (Streaming SIMD Extension),
+AVX (Advanced Vector eXtension)
+and GPU (Graphics Processing Unit) versions for running
+{\tt NBODY6}, first developed at the Institute of Astronomy in April 2008. 
+As before, the standard code is compiled by typing {\tt make nbody6} in the
+directory {\tt Ncode} and there are no new routines inside the {\tt Makefile}.
+For the GPU2 version, type {\tt make gpu} in dir {\tt GPU2}.
+\medskip
+
+Hardware requirements for the SSE/AVX/GPU versions are either a multi-core
+CPU of the type x86 or x86\_64 processors with SSE/AVX support and/or
+a GPU with CUDA support. Core i5/i7 with 64-bit OS is recommended for high
+performance calculations with AVX.
+GeForce GTX 660Ti or GTX 680 is adequate for a single GPU.
+\medskip
+
+Software requirement: 
+%GCC officially supports OpenMP (option {\tt -fopenmp}) from
+%version 4.2.
+%However, CUDA 1.1 does not work with GCC 4.2.
+%Hence in some distributions, GCC 4.2 is needed for host compilation and
+%4.1 for the GPU code.
+%Since Fedora with GCC 4.1 supports OpenMP unoficially, it can be used
+%for both compilations.
+AVX requires support of both the compiler and kernel.
+For simplicity, we mention that combination of CentOS 6.x
+and CUDA 4.x or later can compile and execute the code successfully.
+
+\medskip
+
+The directory {\tt GPU2} has several extra Fortran routines which contain the
+new procedures, as well as some modified standard routines.
+The subdirectory {\tt lib} holds the GPU library for regular force.
+To obtain the GPU2 version {\tt nbody6.gpu}, type {\tt make gpu} in the 
+directory {\tt GPU2} while {\tt make avx} produces {\tt nbody6.avx}.
+In both versions we use the OpenMP directives in some routines.
+The executable is sent to the run subdirectory {\tt GPU2/run} which
+also contains simple input templates (or see dir {\tt Docs}).
+Input for different simulations remains as before, with most options
+having the usual meaning.
+\medskip
+
+Users can specify the number of threads per process by setting the
+environment variable {\tt OMP\_NUM\_THREADS}.
+Since we use multiple cores, the CPU time in the output is larger
+than the wall-clock time in the ADJUST line. The actual time for data
+send and gravity calculation is given on the screen at the end, together
+with the corresponding Gflops.
+
+\medskip
+Some comments on extra routines in dir GPU2 or {\tt lib}.
+
+\medskip
+\noindent
+gpunb.velocity.cu: main routine for GPU library in CUDA (dir {\tt lib}).
+
+\medskip
+\noindent
+intgrt.omp.f: integration flow control for GPU or SSE (also parallelized).
+
+\medskip
+\noindent
+repair.f: modification of array LISTQ after new or terminated KS.
+
+\medskip
+\noindent
+jpred.f: standard prediction of X \& XDOT and resolved KS components (J $>$ N).
+
+\medskip
+\noindent
+jpred2.f: neighbour prediction of single particle (local arrays).
+
+\medskip
+\noindent
+ksres3.f: transformed coordinates and velocities of KS pairs (local arrays).
+
+\medskip
+\noindent
+cxvpred.cpp: full X \& XDOT prediction in C++ except for TPRED(J)=TIME.
+
+\medskip
+\noindent
+gpucor.f: regular force corrector and irregular force loop.
+
+\medskip
+\noindent
+cmfirr.f: irregular force on perturbed c.m.'s.
+
+\medskip
+\noindent
+cmfirr2.f: irregular force on singles from c.m.'s at regular force times.
+
+\medskip
+\noindent
+kspert.f: KS perturbation force loops done in C++ by cnbint.cpp.
+
+\medskip
+\noindent
+nbintp.f: parallel irregular force corrector with fast neighbour force.
+
+\medskip
+\noindent
+nbint.f: fast neighbour force ($<$ NPMAX), corrector \& decision-making.
+
+\medskip
+\noindent
+cnbint.cpp: neighbour force loop (in C++ with SSE).
+
+\medskip
+\noindent
+adjust.f: standard energy check routine but calls energy2.f.
+
+\medskip
+\noindent
+gpupot.gpu.cu: fast evaluation of all potentials on GPU (in dir {\tt lib}).
+
+\medskip
+\noindent
+energy2.f: summation of individual potentials after differential correction.
+
+\medskip
+\noindent
+phicor.f: differential potential corrections due to binary interactions.
+
+\medskip
+\noindent
+swap.f: randomized particle swapping at T = 0 (reduces crowding).
+
+\medskip
+\medskip
+\noindent
+Optimization:
+
+\medskip
+Optimized performance is achieved by minimizing the number of overflows
+which results in the last block members ($<$ NIMAX) being recalculated.
+However, small average neighbour numbers (also in \#9 output line) may affect
+the accuracy. Based on preliminary tests, a relatively large value of
+NNBMAX and option \#40 = 2 (or 3 for decreasing NNBMAX after escape)
+appears to be a good strategy.
+The fast routine cnbint.cpp is used by gpucor.f, nbint.f, nbintp.f and kspert.f.
+Note that all arguments are offset by -1 in cnbint.cpp for consistency with
+the C++ convention.
+Later we included NBMAX in common6.h and updated it in adjust.f as
+MIN(NNBMAX+150,LMAX-5). This is now used as a practical upper limit by
+GPUNB\_REGF which reduces overflows (various conditions involving
+NNBMAX in gpucor.f have been removed).
+
+\medskip
+\medskip
+\noindent
+%Overflows:
+%
+%\medskip
+%Overflows may occur in two different ways.
+%There are 32 blocks for use on the GPU.
+%So if the maximum neighbour number is 400 and the indices are
+%distributed evenly, there would be 400/32 members in each block.
+%Thus a random distribution
+%would be within the permitted range nearly all the time.
+%However, crowding in the first bin due to mass segregation and
+%terminated KS components with small time-steps may occur later.
+%The former effect is alleviated by initial random swapping of particle
+%indices (but {\it not} names) after data allocation.
+%Hence neighbour lists are sequential with masses randomized.
+
+\medskip
+\medskip
+\noindent
+Options:
+
+\medskip
+In order to save time on the host (large $N$ only), \#38 = 2 restricts the
+neighbour force derivative corrections to $1 \,\%$ regular force change,
+while for \#38 = 1 all corrections are done.
+The CPU time may also be reduced by saving the common blocks on fort.1
+only at every main output as a backup for rare restarts (\#1 = 2 and \#2 = 0).
+Option \#40 $>= 2$ stabilizes the average neighbour number (in adjust.f)
+on a fraction of the maximum (e.g. NNBMAX/5) for small overflow numbers.
+The overflow counters (\#9 OVERFLOWS; current and accumulated) at main
+output provide useful diagnostics of the behaviour (\#33 $>$= 2).
+To be consistent with decreasing particle numbers, the maximum membership
+is reduced by a square root relation scaled by the initial value (\#40 = 3).
+
+\medskip
+\medskip
+\noindent
+GPUIRR
+
+\medskip
+The new irregular library deals with prediction of active particles and
+evaluation of neighbour forces.
+In the case of no regular force calculation,
+the predictions are done by GPUIRR\_PRED\_ACT or PRED\_ALL.
+Here the parameter NPACT, defined in intgrt.omp.f, is used to decide between
+the two versions of prediction, respectively.
+Irregular forces for active particles are obtained by the SSE vector
+procedure GPUIRR\_FIRR\_VEC.
+Finally corrected quantities are sent to this library by GPUIRR\_SET\_JP
+at the end of the cycle.
+
+\end{document}

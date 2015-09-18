@@ -1,0 +1,74 @@
+*
+*       Update the list of recently regularized particles.
+   41 NNB = LISTR(1)
+      DO 44 L = 2,NNB+1
+*       First see whether either component has been regularized before.
+          IF (LISTR(L).EQ.ICOMP.OR.LISTR(L).EQ.JCOMP) THEN 
+*       Remove corresponding pair even if only one component is present.
+              J = 2*KVEC(L-1)
+*       Move up the subsequent pairs and reduce membership by two.
+              DO 42 K = J,NNB-1
+                  LISTR(K) = LISTR(K+2)
+   42         CONTINUE
+              LISTR(1) = LISTR(1) - 2
+*       Make a new search otherwise LISTR -> -2 if NNB = 2.
+              GO TO 41
+          END IF
+   44 CONTINUE
+*
+*       Rename exchanged components if present in the list.
+      DO 48 KCOMP = 1,2
+          DO 46 L = 2,NNB+1
+              IF (LISTR(L).EQ.2*NPAIRS - 2 + KCOMP) THEN
+                  IF (KCOMP.EQ.1) LISTR(L) = ICOMP
+                  IF (KCOMP.EQ.2) LISTR(L) = JCOMP
+              END IF
+   46     CONTINUE
+   48 CONTINUE
+*
+*       Update the list of high velocity particles.
+      IF (LISTV(1).EQ.0) GO TO 70
+      NNB = LISTV(1)
+      L = 1
+   50 L = L + 1
+*       Check for removal of regularized component.
+      IF (LISTV(L).EQ.ICOMP.OR.LISTV(L).EQ.JCOMP) THEN
+          DO 52 K = L,NNB
+              LISTV(K) = LISTV(K+1)
+   52     CONTINUE
+          LISTV(1) = LISTV(1) - 1
+          NNB = NNB - 1
+*       Consider the same location again.
+          L = L - 1
+      END IF
+      IF (L.LE.NNB) GO TO 50
+*
+*       Rename exchanged components.
+      DO 58 KCOMP = 1,2
+          DO 56 L = 2,NNB+1
+              IF (LISTV(L).EQ.2*NPAIRS - 2 + KCOMP) THEN
+                  IF (KCOMP.EQ.1) LISTV(L) = ICOMP
+                  IF (KCOMP.EQ.2) LISTV(L) = JCOMP
+              END IF
+   56     CONTINUE
+   58 CONTINUE
+*
+*       Remove any fast particles which have slowed down or are outside 2<R>.
+      L = 1
+   60 L = L + 1
+      IF (LISTV(1).EQ.0) GO TO 70
+      J = LISTV(L)
+      A0 = XDOT(1,J)**2 + XDOT(2,J)**2 + XDOT(3,J)**2
+      A2 = (X(1,J) - RDENS(1))**2 + (X(2,J) - RDENS(2))**2 +
+     &                              (X(3,J) - RDENS(3))**2
+      IF (A0.LT.16.0*ECLOSE.OR.A2.GT.4.0*RSCALE**2) THEN 
+          DO 65 K = L,NNB
+              LISTV(K) = LISTV(K+1)
+   65     CONTINUE
+          LISTV(1) = LISTV(1) - 1
+          NNB = NNB - 1
+*       Consider the same location again.
+          L = L - 1
+      END IF
+      IF (L.LE.NNB) GO TO 60
+*

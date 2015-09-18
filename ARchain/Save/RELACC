@@ -1,0 +1,108 @@
+       SUBROUTINE Relativistic ACCELERATIONS(ACC,ACCGR,Va,spina,dspin)
+        INCLUDE 'ARCCOM2e2.CH'
+        COMMON/EXTRA/ KNAME(NMX)
+        REAL*8 ACC(*),dX(3),dW(3),dF(3),Va(*),ACCGR(*),dfGR(3),dsp(3),
+     &         spina(3),dspin(3)
+        common/collision/icollision,IBH,JBH,iwarning
+        common/notneeded/rijnotneeded
+        common/deeveet/dv2(3),dv4(3),dv5(3)
+        save
+*
+        Cl=Clight! SPEED OF LIGHT 
+C       INITIALIZE the relativistic acceration(s) here. 
+        DO  I=1,3*N
+        ACC(I)=0.0
+        ACCGR(I)=0.0
+        end do
+        do k=1,3
+        dspin(k)=0
+        end do
+        IF (IBH.LE.0) RETURN
+*       DO IK=1,N      ! Seppo's original scheme.
+        I=IBH          ! Explicit scheme, 14/6/10.
+        IK=KNAME(I)
+        I3=3*I
+        I2=I3-1
+        I1=I3-2
+*       DO JK=IK+1,N
+        J=JBH
+        JK=KNAME(J)
+        J3=J+J+J
+        J2=J3-1
+        J1=J3-2
+        if(JK.NE.IK+1)THEN
+        dx(1)=X(J1)-X(I1)
+        dx(2)=X(J2)-X(I2)
+        dx(3)=X(J3)-X(I3)
+        dw(1)=Va(J1)-Va(I1)
+        dw(2)=Va(J2)-Va(I2)
+        dw(3)=Va(J3)-Va(I3)
+        ELSE
+        K1=3*IK-2
+        K2=K1+1
+        K3=K2+1
+        dx(1)=XC(K1)
+        dx(2)=XC(K2)
+        dx(3)=XC(K3)
+        dw(1)=Va(J1)-Va(I1) 
+        dw(2)=Va(J2)-Va(I2)
+        dw(3)=Va(J3)-Va(I3)
+        END IF
+        vij2=dw(1)**2+dw(2)**2+dw(3)**2
+
+c       This (cheating) avoids vij>cl and produces only O(1/c^6) 'errors'.
+        do k=1,3
+        dw(k)=dw(k)/(1+(vij2/cl**2)**4)**.125d0 !  avoid V_ij > c !!
+c        dw(k)=dw(k)/(1+(vij2/cl**2)**2)**.25d0 ! not so good
+        end do
+        
+        vij2=dw(1)**2+dw(2)**2+dw(3)**2
+        RS=2.d0*(m(i)+m(j))/CL**2
+
+        RIJ2=dx(1)**2+dx(2)**2+dx(3)**2
+        rij=sqrt(rij2)
+        rdotv=dx(1)*dw(1)+dx(2)*dw(2)+dx(3)*dw(3)
+*       Ii=min(i,j)  ! activated 18/6 (check with Seppo).
+*       Jx=max(i,j)
+        IF(M(I).GT.M(J))THEN
+        Ii=I
+        Jx=J
+        ELSE
+        Ii=J
+        Jx=I
+        END IF
+*       call Relativistic  ! replaced by 2010 NBODY7 version.
+*    &  Terms(Ii,dX,dW,rij,rdotv,vij2,m(Ii),m(Jx),cl,DF,dfGR,spina,dsp)
+        call PNPERT
+     &      (dX,dW,rij,rdotv,vij2,m(Ii),m(Jx),DF,dfGR,spina,dsp)
+*           Note m(Ii), m(Jx) changed from m(i), m(j) 18/6/10 (OK by Seppo).
+            RS=2.d0*(m(i)+m(j))/CL**2
+          if(rij.lt.4.*RS.and.iwarning.lt.2)
+     &      write(6,*)' Near collision: r/RS',rij/RS,i,j,rij,RS ! diagno
+            if(rij.lt.4*RS)then!
+            iwarning=iwarning+1
+            icollision=1   ! collision indicator
+            end if
+         do k=1,3
+         dspin(k)=dspin(k)+dsp(k)
+         end do
+*       Note all signs changed 24/6/10 consistent with Rel Terms and PNPERT.
+        ACC(I1)=ACC(I1)-m(j)*dF(1) ! here I assume action = reaction
+        ACC(I2)=ACC(I2)-m(j)*dF(2) ! which is not really true for 
+        ACC(I3)=ACC(I3)-m(j)*dF(3) ! relativistic terms (but who cares)
+        ACC(J1)=ACC(J1)+m(i)*dF(1)
+        ACC(J2)=ACC(J2)+m(i)*dF(2)
+        ACC(J3)=ACC(J3)+m(i)*dF(3)
+c        Grav.Rad.-terms split according to masses (allows c.m. velocity).
+        ACCgr(I1)=ACCgr(I1)-m(j)*dFgr(1) ! here I assume action = reaction
+        ACCgr(I2)=ACCgr(I2)-m(j)*dFgr(2) ! which is not really true for 
+        ACCgr(I3)=ACCgr(I3)-m(j)*dFgr(3) ! relativistic terms (but who cares)
+        ACCgr(J1)=ACCgr(J1)+m(i)*dFgr(1)
+        ACCgr(J2)=ACCgr(J2)+m(i)*dFgr(2)
+        ACCgr(J3)=ACCgr(J3)+m(i)*dFgr(3)
+*
+*       END DO ! J  Suppressed after Seppo's new suggestion.
+*       END DO ! I
+        
+        RETURN
+        END

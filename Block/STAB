@@ -1,0 +1,7 @@
+*       Restrict Mardling 2008 stability criterion to modest mass ratios.
+          Q1 = BODY(I1)/BODY(I2)
+          IF (Q1.GT.0.1.AND.Q1.LT.10.0) THEN
+             NST = NSTAB(SEMI,SEMI1,ECC,EOUT,ANGLE,BODY(I1),BODY(I2),BJ)
+          ELSE
+             NST = 0
+          END IF

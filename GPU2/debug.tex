@@ -1,0 +1,219 @@
+\documentclass[12pt]{article}
+\pagestyle{plain}
+\setlength {\textwidth} {16.0cm}
+\setlength {\textheight} {23.0cm}
+\setlength {\oddsidemargin} {0cm}
+\begin{document}
+
+\centerline {Debugging strategies for NBODY6/GPU~~~~(Sverre Aarseth 2/2011)~~~~~~}
+\bigskip
+\noindent
+
+Although the GPU code has been tested extensively, a variety of problems may
+still occur when facing new situations.
+It is hoped that the following suggestions for tracking down some common types of
+problems will be useful.
+Explicit procedures will be presented which do not require a thorough familiarity
+with the code.
+Debugging strategy can be divided into two separate parts: (i) identify the
+precise origin (or nature) of the complaint, and (ii) fix the problem.
+In general, the second stage assumes some understanding of the code structure
+and may well be beyond the scope of many users.
+However, even pin-pointing the source of trouble can be useful when accompanied
+by relevant documentation.
+For the purpose of identifying such behaviour, the start of a new block-step 
+provides useful information.
+Depending on the outcome, several strategies are available.
+In the following we consider a few characteristic problem types that cause loss
+of accuracy or premature termination.
+
+\bigskip
+\noindent
+1.~Assert error in {\tt gpunb.reduce.cu}
+
+\medskip
+This type of error usually means a {\tt NaN} in the data sent to GPU.
+The following simple steps may be helpful.
+
+Restart from the last good {\tt common6} save, copied from {\tt fort.2}
+or obtained directly from a recent save on {\tt fort.1}.
+The diagnostic output at label 22 of {\tt intgrt.omp.f} (including {\tt CALL FLUSH})
+should be activated, replacing the irregular time-step counter {\tt NSTEPI} by
+the regular step counter {\tt NSTEPR}.
+
+Restart again with {\tt WRITE (6,22)} suppressed and a loop from {\tt IFIRST,NTOT}
+placed just before {\tt CALL~GPUNB}\textunderscore{\tt SEND} as defined by the last diagnostic
+value of {\tt NSTEPR}.
+A {\tt NaN} may then be identified for a given index {\tt J} or {\tt NAME(J)} using the test
+{\tt IF(X(1,J).NE.X(1,J))}, followed by {\tt STOP}, or try {\tt XDOT(1,J)} instead if
+no luck.
+Note that the actual {\tt NaN} may have been inflicted at a slightly earlier stage.
+It would then be necessary to consider {\tt X} or {\tt X0} before the full predictor
+loop {\tt CALL CXVPRED}.
+
+Now a third restart should be made, tracking the critical particle {\tt JCRIT} in
+the regular force corrector {\tt gpucor.f}.
+Some diagnostics can be added just before label 110, using {\tt IF(NAME(I).EQ.NAME(JCRIT))},
+followed by printing some relevant variables, e.g.
+{\tt NSTEPR, NBGAIN, NBLOSS, NNB, FIRR(1), FREG(1), STEPR(I)}.
+Inspection of this information may then provide a clue to the nature of the problem,
+which calls for further investigation.
+
+\bigskip
+\noindent
+2.~Stop on small time-step
+
+\medskip
+After enforced stop with small {\tt STEP(I)}, a similar strategy as above may be tried.
+Alternatively, the block-step information would show the pre-history, including the
+size of the active particle block.
+For example, only two particles repeatedly assigned to the block-step would suggest
+the offending particles are unsuccessful candidates for new KS or chain treatment.
+Further tracking as above should clarify the situation.
+
+\bigskip
+\noindent
+3.~Infinite looping without output
+
+\medskip
+Restart with same diagnostics as for Problem 1, where printing the last value of
+{\tt NSTEPR} may also be useful.
+One attempt would now be to make a further search similar to the third procedure above.
+However, the problem might be associated with KS or chain regularization.
+This can be ruled out by bisecting the {\tt CALL SUBINT} procedure; i.e. placing
+a write statement (with {\tt FLUSH} both before and after this call, using the
+last known time-step counter of any type as a starting point.
+If this attempt fails, a similar one may be tried for {\tt CALL NBINT} and
+(if relevant) even bracketing the parallel irregular force loop.
+This approach should eventually lead to identification of the crucial procedure
+through further internal bisecting once the relevant routine has been isolated.
+
+\bigskip
+\noindent
+4.~Force discontinuity
+
+\medskip
+This type of problem is harder to resolve.
+In fact, the reasons for some of the other problems are often due to this type of behaviour.
+If option \#38=1, restart with the following diagnostics just before the regular
+corrector {\tt DO 75} in {\tt gpucor.f}:  \\
+\noindent
+{\tt IF(NBGAIN+NBLOSS.EQ.0) THEN} \\
+\noindent
+{\tt WRITE NAME(I),NNB,FIRR(1)-FI(1,I),FIRR}
+
+Alternatively, the general bug trap at label 560 of {\tt gpucor.f} for \#38=1 (suppressed,
+together with FXI at the beginning) would also produce some information on force
+discontinuities.
+Note that the relative size of the irregular force discontinuity, as well as the absolute
+value is relevant.
+Strictly speaking the irregular force difference should be zero on no neighbour change
+but this cannot be guaranteed when binaries are present, in which case a small error
+may be tolerated.
+However, even small systematic errors may cause shrinking time-steps.
+Otherwise if \#38=0 or 2, this test may also work for small and decreasing regular
+time-steps when the neighbour list tends to be unchanged.
+The case of force discontinuity with no change of neighbours could also be due to the
+retention of an old member, where its contribution is evaluated on the host in
+different precision and when the force is large (relative size $\le 1D-07$).
+Further study of the force divergence would involve a detailed comparison of the
+irregular forces as obtained by {\tt nbint.f} and {\tt gpucor.f} at the same value of
+{\tt TIME}.
+
+\bigskip
+\noindent
+5.~General problem of increased energy errors
+
+\medskip
+In principle this could be due to a wide variety of processes.
+The cause can be narrowed down by looking for sudden shrinkage of time-steps, in
+particular the regular time-step is more sensitive to numerical problems, which in turn
+leads to shrinkage of the corresponding irregular step at end of {\tt gpucor.f}.
+In the first instance, the procedure for identifying sudden shrinkage of the natural
+regular time-step {\tt DT0} in the corrector {\tt gpucor.f} may be activated.
+Now pick the most obvious candidate (if any) and include diagnostics for tracking
+its pre-history as for Problem 1 above.
+Other problems that are reproduced after a restart may be pin-pointed by successive
+sub-divisions (factor of 2) of the output interval and appropriate common saves, using
+the bisecting principle.
+Note that in some cases reproducibility may well be lost because of extra predictions.
+
+The sudden onset of time-step shrinkage may be correlated with some event as for
+example KS termination of a binary or long-lived triple, or a particular stellar
+evolution process (e.g. binary coalescence with mass loss).
+During such investigations it may be helpful to activate options for providing more
+information, like \#10=2 for KS, \#15=2 for hierarchies or \#30=2 or =3 for chain
+regularization.
+
+\bigskip
+\noindent
+6.~Segmentation error
+
+\medskip
+This fatal error is relatively rare in a well tested code.
+One approach is to recompile the whole code with the bug trap {\tt -fbounds-check}
+replacing the standard option in {\tt Makefile}\textunderscore{\tt gpu}.
+If applicable, detailed information about over-writing a specific array is supplied.
+Hence the typical cause is for an array index on the host to be outside the defined
+range.
+
+\bigskip
+\noindent
+7.~Difficult cases
+
+\medskip
+A general star cluster simulation has to deal with a wide range of events or different
+configurations, some of which may lead to numerical difficulties.
+Among the main ones are long-lived hierarchical systems and close stellar interactions
+involving the common-envelope process or collision where mass-loss is a characteristic
+feature.
+Hierarchical systems which fail the stability test may still be long-lived and such
+configurations introduce systematic energy errors which also slows down the advance.
+Use of option \#15=2 is helpful in identifying any critical triples or quadruples, while
+information about higher-order systems is provided regardless.
+Note that the stability of hierarchies is assessed frequently (every apocentre passage)
+so that even a slow secular change will signal termination if the boundary is crossed.
+
+In astrophysical simulations, the interaction of eccentric binary components may present
+particular problems.
+Characteristically, such events are often triggered by strong perturbations.
+Hence any corrections for mass loss may involve large terms and consequent loss of accuracy.
+Force polynomial initialisation of neighbours adds to the numerical problems if, as usual,
+the block time-step is small.
+Tidal circularization is also a complicated process where two optional formulations
+have been implemented.
+
+One common source of systematic errors is due to massive binaries that are slightly too 
+wide to be regularized.
+Thus direct integration of such systems may be responsible for any drift in total energy
+(cf. {\tt DETOT}).
+Alternatively, binaries may require more perturbers than available in the neighbour list.
+This type of problem is more often associated with small-$N$ simulations.
+
+
+\bigskip
+\noindent
+8.~Reproducibility
+
+\medskip
+It is highly desirable that the results of a simulation can be reproduced.
+This is also important for problem identification.
+However, the interplay of different methods on the host and GPU creates
+complications and to this we should add the tricky business of parallel
+procedures which introduce additional complications over sequential treatment.
+At the simplest level, reproducibility is usually achieved when setting
+one thread only ({\tt setenv~OMP}\textunderscore{\tt NUM}\textunderscore{\tt THREADS}~1).
+A relatively short interval since the last common save may also increase the
+chance of reconstructing the desired outcome.
+Note that episodes involving chain regularization are especially sensitive to obtaining
+the correct detailed time-step history.
+As far as parallel loops are concerned, the treatment of each particle should only
+depend on the {\it predicted} quantities of other particles.
+One way to improve reproducibility is to suppress the parallel corrector loop in
+{\tt intgrt.omp.f}, ({\tt CALL GPUCOR}), when using full threads, albeit with some
+reduction in performance.
+It can be seen that procedures used by {\tt gpucor.f} are consistent with full
+parallel treatment.
+However, additional factors could be responsible for any lack of success.
+
+\end{document}

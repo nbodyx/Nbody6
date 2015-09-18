@@ -1,0 +1,4 @@
+      VI2 = X0DOT(1,I)**2+X0DOT(2,I)**2+X0DOT(3,I)**2
+      IF (VI2.GT.10.0) WRITE (6,400)  I, VI2
+  400 FORMAT (' HIGHP   ',I6,1P,E10.2)
+      END IF
