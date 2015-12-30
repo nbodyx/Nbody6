@@ -333,28 +333,14 @@
           NAMEI = NAME(I)
           DEDT = 0.0
           DTPREV = 1.0
-          NST = NSTAB(SEMI,SEMI1,ECC,ECC1,ZI,BODYI(1),BODYI(2),ZM3)
-          IF (NST.EQ.0) THEN
-              PCRIT = 0.98*QPERI*(1.0 - PERT)
-              PCR = stability(BODYI(1),BODYI(2),ZM3,ECC,ECC1,ZI)
-              PCR = PCR*SEMI
-*       Specify reduced peri if old criterion < PCRIT/2 (avoids switching).
-              IF (PCR.LT.0.5*PCRIT) THEN
-                  PCRIT = 0.75*PCRIT
-              END IF
-              IF (PCRIT.LT.PCR.AND.PERT.LT.0.01.AND.
-     &            ITIME.LT.20) THEN
-                  ALPH = 360.0*ZI/TWOPI
-                  FAIL = QPERI*(1-PERT) - PCR
-                  WRITE (6,42)  TTOT, ALPH, ECC, ECC1, QPERI, FAIL, PERT
-   42             FORMAT (' NEWSTAB    T INC EI EO QP FAIL PERT ',
-     &                                 F7.1,F7.2,2F8.4,1P,3E10.2)
-              END IF
+          QST = QSTAB(ECC,ECC1,ZI,BODYI(1),BODYI(2),ZM3)
+          PMIN = SEMI1*(1.0 - ECC1)
+          IF (QST*SEMI.LT.PMIN) THEN
+              PCRIT = 0.99*QPERI*(1.0 - PERT)
           ELSE
               PCRIT = 1.01*QPERI
           END IF
-          PMIN1 = SEMI1*(1.0 - ECC1)
-          IF (PMIN1.LT.PCRIT) THEN
+          IF (PMIN.LT.PCRIT) THEN
               NK = 1 + 10.0*ECC1/(1.0 - ECC1)
               TCHECK = TIME + TOFF + NK*TK1
           ELSE

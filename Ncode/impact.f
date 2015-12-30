@@ -68,6 +68,7 @@
           RCRIT2 = 4.0*RCRIT2
           ITER = ITER + 1
           IF (ITER.LT.10) GO TO 5
+          GO TO 100
       END IF
 *
       RDOT = (X(1,I) - X(1,JCL))*(XDOT(1,I) - XDOT(1,JCL)) +
@@ -303,7 +304,7 @@
           KCHAIN = 1
           IF (NCH.GT.0) KCHAIN = 0
       END IF
-      IF (KCHAIN.GT.0.AND.RIJ.GT.20.0*SEMI) GO TO 100
+      IF (KCHAIN.GT.0.AND.RIJ.GT.20.0*RMIN) GO TO 100
 *
       WHICH1 = ' TRIPLE '
       IF (JCL.GT.N) WHICH1 = ' QUAD   '
@@ -461,8 +462,8 @@
               QCHECK = TIME + MIN(0.5*TWOPI*TK,0.1*TCR)
               TK = DAYS*TK
 *       Check the stability criterion.
-              PCR = stability(BODY(I1),BODY(I2),BODY(JCL),ECC,ECC1,
-     &                                                0.0D0)*SEMIX
+              QST = QSTAB(ECC,ECC1,0.0D0,BODY(I1),BODY(I2),BODY(JCL))
+              PCR = QST*SEMIX
               WRITE (89,33)  TTOT, NAME(2*IPAIR-1), NAM1, K, RI,
      &                       ECC1, EB, EB2, EB1, TK, PMIN, PCR
    33         FORMAT (' QUAD    T NAM LQ RI E1 EB EB2 EB1 P1 PM PC ',
@@ -684,7 +685,7 @@
 *         IF (PCRIT.GT.2.0*PMIN) GO TO 100
 *     END IF
 *
-*       Evaluate the general stability function (Mardling 2008).
+*       Evaluate the three-body stability.
       IF (ECC1.LT.1.0.AND.YFAC.LT.1.02) THEN
           BJ = BODY(JCL)
           EOUT = ECC1
@@ -708,18 +709,26 @@
 *       Allow extra tolerance after 1000 tries (suppressed 9/3/12).
 *             IF (NMTRY.GE.1000) DE = MIN(1.0D0 - EOUT,0.02D0)
               EOUT = MIN(EOUT - DE,0.9999D0)
-              PMIN = SEMI1*(1.0 - EOUT)
           END IF
+          PMIN = SEMI1*(1.0 - EOUT)
+*       Choose between Mardling 2007 and Valtonen 2015 criterion.
           NST = NSTAB(SEMI,SEMI1,ECC,EOUT,ANGLE,BODY(I1),BODY(I2),BJ)
-          IF (NST.EQ.0) THEN
-              PCRIT = 0.98*PMIN*(1.0 - PERT)
-              PCR = stability(BODY(I1),BODY(I2),BODY(JCL),ECC,EOUT,
-     &                                                          ANGLE)
-              PCR = PCR*SEMI
-*       Specify reduced peri if old criterion < PCRIT/2 (avoids switching).
-              IF (PCR.LT.0.5*PCRIT) THEN
-                  PCRIT = 0.75*PCRIT
+          QST = QSTAB(ECC,EOUT,ANGLE,BODY(I1),BODY(I2),BJ)
+          RP = PMIN/SEMI
+          IF (QST.LT.RP) THEN
+*       Produce optional diagnostic on disagreement.
+              IF (NST.NE.0.AND.KZ(48).GT.0) THEN
+                  Q3 = BJ/(BODY(I1) + BODY(I2))
+                  INC = 360.0*ANGLE/TWOPI
+                  WRITE (88,440)  TIME+TOFF, ECC, EOUT, INC, Q3, RP,
+     &                            QST, NST
+  440             FORMAT (' STABTEST   T E E1 I M3/MB RP/A QST NST ',
+     &                                 F6.1,2F6.2,I5,F5.1,2F6.1,I3)
+                  CALL FLUSH(88)
               END IF
+*       Reduce the limit slightly, also allowing for perturbation.
+              PCRIT = 0.99*PMIN*(1.0 - PERT)
+              PCR = QST*SEMI
               IF (PCRIT.LT.YFAC*PCR.AND.PERT.LT.0.02.AND.
      &            NMTRY.LT.10) THEN
                   ALPH = 360.0*ANGLE/TWOPI
@@ -730,23 +739,15 @@
               END IF
 *     WRITE (57,444)  BODY(I1),(X(K,I1),K=1,3),(XDOT(K,I1),K=1,3)
 *     WRITE (57,444)  BODY(I2),(X(K,I2),K=1,3),(XDOT(K,I2),K=1,3)
-*     WRITE (57,444)  BODY(JCL),(X(K,JCL),K=1,3),(XDOT(K,JCL),K=1,3)
-* 444 FORMAT (' ',1P,E14.6,1P,3E18.10,3E14.6)
-              IF (NMTRY.GE.1000) THEN
-*                 WRITE (6,44)  TTOT, NAME(I1), ECC1, EOUT, PCRIT, PMIN
-*  44             FORMAT (' MARGINAL STAB    T NM E1 EOUT PCR PMIN ',
-*    &                                       F7.1,I7,2F8.4,1P,2E10.2)
-                  NMTRY = 0
-              END IF
+*     WRITE (57,444)BODY(JCL),(X(K,JCL),K=1,3),(XDOT(K,JCL),K=1,3)
+** 444 FORMAT (' ',1P,E14.6,1P,3E18.10,3E14.6)
           ELSE
-              NMTRY = NMTRY + 1
               PCRIT = 1.01*PMIN
           END IF
       ELSE
-          PCR = stability(BODY(I1),BODY(I2),BODY(JCL),ECC,ECC1,ANGLE)
-          PCRIT = PCR*SEMI
+          QST = QSTAB(ECC,ECC1,ANGLE,BODY(I1),BODY(I2),BODY(JCL))
+          PCRIT = QST*SEMI
       END IF
-*
 *       Check whether the main perturber dominates the outer component.
       IF (JMAX.NE.JCL) THEN
           RIJ2 = (X(1,JMAX) - X(1,JCL))**2 +
@@ -931,8 +932,14 @@
       IPHASE = 6
       JCOMP = JCL
 *
-*       Save KS indices and delay merger until end of block step.
-      CALL DELAY(KS2,KS2)
+*       Save KS index and delay merger until end of block step.
+      IF (JCLOSE.GT.N) THEN
+          KS2 = JCLOSE - N
+          IF (KS2.GT.IPAIR) KS2 = KS2 - 1
+      ELSE
+          KS2 = 0
+      END IF
+      CALL DELAY(1,KS2)
 *
   100 IF (IPHASE.NE.8) JCMAX = 0
 *

@@ -32,7 +32,7 @@
 *
       CALL INCLIN(XX,VV,X(1,ICM),XDOT(1,ICM),ANGLE)
 *
-*       Form inner eccentricity (neglect radial velocity for minimum).
+*       Form inner eccentricity.
       RIN = SQRT(XREL(1,IM)**2 + XREL(2,IM)**2 + XREL(3,IM)**2)
       SEMI0 = -0.5*BODY(I1)/HM(IM)
       ECC2 = (1.0 - RIN/SEMI0)**2 + RV**2/(BODY(I1)*SEMI0)
@@ -42,57 +42,31 @@
 *       Evaluate the general stability function.
       IF (ECC.LT.1.0) THEN
           EOUT = ECC
-*       Modify outer eccentricity for consistency with acceptance.
+*       Modify large outer eccentricity for consistency with acceptance.
           IF (EOUT.GT.0.80) THEN
               DE = 0.5*(1.0 - EOUT)
               DE = MIN(DE,0.01D0)
               EOUT = ECC - DE
               PMIN = SEMI*(1.0 - EOUT)
           END IF
-*       Restrict Mardling 2008 stability criterion to modest mass ratios.
-          Q1 = CM(1,IM)/CM(2,IM)
-          IF (Q1.GT.0.1.AND.Q1.LT.10.0) THEN
-              NST = NSTAB(SEMI0,SEMI,ECC0,EOUT,ANGLE,CM(1,IM),
-     &                                         CM(2,IM),BODY(I2))
-      IF (NST.GT.0) THEN
-      WRITE (6,66)  NAME(I1), SEMI0,SEMI,ECC0,EOUT,ANGLE,CM(1,IM)*SMU,
-     &              CM(2,IM)*SMU, BODY(I2)*SMU
-   66 FORMAT (' INSTAB  ',I6,1P,9E10.2)
-      END IF
-          ELSE
-              NST = 0
+          QST = QSTAB(ECC0,EOUT,ANGLE,CM(1,IM),CM(2,IM),BODY(I2))
+          ITIME = ITIME + 1
+          IF (ITIME.GT.2000000000) ITIME = 0
+          IF (MOD(ITIME,1000).EQ.0) THEN
+              ALPH = 360.0*ANGLE/TWOPI
+              PCRIT = QST*SEMI0
+              WRITE (6,20) ECC0, ECC, ALPH, SEMI, PCRIT, PMIN, R0(IPAIR)
+   20         FORMAT (' ASSESS    E0 E1 INC A1 PCR PMIN R0 ',
+     &                            2F7.3,F7.1,1P,4E9.1)
           END IF
-          IF (NST.EQ.0) THEN
-              PCRIT = 0.98*PMIN
-              PCR = stability(CM(1,IM),CM(2,IM),BODY(I2),
-     &                                          ECC0,ECC,ANGLE)*SEMI0
-*        Reduce termination distance if old criterion < PMIN/2.
-              IF (PCR.LT.0.5*PMIN) THEN
-                  PCRIT = 0.75*PMIN
-              END IF
-              ITIME = ITIME + 1
-              IF (ITIME.GT.2000000000) ITIME = 0
-              IF (MOD(ITIME,1000).EQ.0) THEN
-                  ALPH = 360.0*ANGLE/TWOPI
-                  WRITE (6,20)  ECC0, ECC, ALPH, SEMI, PCRIT, PCR,
-     &                          R0(IPAIR)
-   20             FORMAT (' ASSESS    E0 E1 INC A1 PCR PC0 R0 ',
-     &                                2F7.3,F7.1,1P,4E9.1)
-              END IF
-          ELSE
-              PCRIT = 1.01*PMIN
-          END IF
-      ELSE
-          PCRIT = stability(CM(1,IM),CM(2,IM),BODY(I2),
-     &                                        ECC0,ECC,ANGLE)*SEMI0
-      END IF
 *
-*       Set new stability distance or define termination.
-      IF (PCRIT.LT.PMIN) THEN
-          ITERM = 0
-          R0(IPAIR) = PCRIT
-      ELSE
-          ITERM = 1
+*       Set new stability distance in R0 or define termination.
+          IF (QST*SEMI0.LT.PMIN) THEN
+              ITERM = 0
+              R0(IPAIR) = QST*SEMI0
+          ELSE
+              ITERM = 1
+          END IF
       END IF
 *
       RETURN

@@ -43,8 +43,8 @@
    10 CONTINUE
 *
 *       Impose realistic distance limit (closest perturber may be receding).
-      IF (JCLOSE.EQ.0.OR.(RX.GT.RMIN22.AND.GPERT.LT.0.2)) GO TO 50
-      IF (RX.GT.4.0*RMIN22) GO TO 50
+      IF (JCLOSE.EQ.0.OR.(RX.GT.9.0*RMIN22.AND.GPERT.LT.0.2)) GO TO 50
+      IF (RX.GT.100.0*RMIN2.OR.JCLOSE.GT.N) GO TO 50
       WRITE (6,20)  TIME+TOFF, NSTEP1, NN, NPERT, NAME(JCLOSE),
      &              SQRT(RX), GPERT, 1.0/RINV(1)
    20 FORMAT (/,' CHAIN INJECT    T # NN NP NM RX GP RB ',

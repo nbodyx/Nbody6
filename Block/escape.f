@@ -543,9 +543,9 @@
   235     CONTINUE
           ECC2 = (1.0 - RJ/SEMI0)**2 + TD2**2/(BODYCM*SEMI0)
           ECC0 = SQRT(ECC2)
-          PCRIT = stability(CM(1,JM),CM(2,JM),BODY(JCOMP),ECC0,ECC,
-     &                                                       0.0D0)
-          PCRIT = PCRIT*SEMI0
+          QST = QSTAB(ECC0,ECC,0.0D0,CM(1,JM),CM(2,JM),BODY(JCOMP))
+          PCRIT = QST*SEMI0
+          PMIN = SEMI*(1.0 - ECC)
 *
           WRITE (6,240)  NAME1, NAMEG(JM), KSTAR1, KSTAR(JCOMP),
      &                   KSTARM(JM), CM(1,JM)*ZMBAR, CM(2,JM)*ZMBAR,

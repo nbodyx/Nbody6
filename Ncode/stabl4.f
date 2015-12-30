@@ -124,16 +124,18 @@
 *       Check stability (AM 1997; inner triple or well separated quadruple).
       ITERM = 0
       IF (RB1.GT.5.0*RB2.AND.E2.LT.1.0) THEN
-          Q1 = M(K3)/MB0
-          XFAC = (1.0 + Q1)*(1.0 + E2)/SQRT(1.0 - E2)
-          PCRIT = 2.8*XFAC**0.4*SEMI0
-          PMIN = SEMI2*(1.0 - E2)
-          IF (PCRIT.LT.PMIN) THEN
+*         Q1 = M(K3)/MB0
+*         XFAC = (1.0 + Q1)*(1.0 + E2)/SQRT(1.0 - E2)
+*         PCRIT = 2.8*XFAC**0.4*SEMI0
+*         PMIN = SEMI2*(1.0 - E2)
+          RP = SEMI2*(1.0 - E2)/SEMI0
+          QST = QSTAB(E0,E2,0.0D0,M(K1),M(K2),M(K3))
+          IF (QST.LT.RP) THEN
               ITERM = -1
               RATIO = SEMI2*(1.0D0 - E2)/(SEMI0*(1.0D0 + E0))
               WRITE (6,15)  SEMI0, SEMI2, E0, E2, RATIO, RB0, RB2,
-     &                      PCRIT, PMIN
-   15         FORMAT ('  STABT:    A0 A2 E0 E2 RATIO R0 R2 PCR PM ',
+     &                      QST, RP
+   15         FORMAT ('  STABT:    A0 A2 E0 E2 RATIO R0 R2 QST RP ',
      &                             1P,2E10.2,0P,2F7.3,F6.2,1P,4E9.1)
           END IF
       ELSE IF (RB1.GT.5.0*MAX(RB0,RB).AND.E1.LT.1.0.AND.

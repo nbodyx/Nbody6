@@ -1,8 +1,8 @@
       SUBROUTINE CHSTAB(ITERM)
 *
 *
-*       Chain stability test.
-*       ---------------------
+*       Three-body chain stability test.
+*       --------------------------------
 *
       IMPLICIT REAL*8 (A-H,O-Z)
       PARAMETER (NMX=10,NMX3=3*NMX,NMXm=NMX*(NMX-1)/2)
@@ -76,10 +76,10 @@
 *       Add 1% for perturbation to avoid repeated switching.
 *     PCRIT = 1.01*PCRIT
 *
-*       Evaluate the general stability function (Mardling, Cambody 2008).
+*       Evaluate the general stability function (Valtonen 2015).
       IF (ECC1.LT.1.0.AND.ECC.LT.1.0) THEN
-          NST = NSTAB(SEMI,SEMI1,ECC,ECC1,ALPHA,M(I1),M(I2),M(I3))
-          IF (NST.EQ.0) THEN
+          QST = QSTAB(ECC,ECC1,ALPHA,M(I1),M(I2),M(I3))
+          IF (QST*SEMI.LT.PMIN) THEN
               PCRIT = 0.99*PMIN
           ELSE
               PCRIT = 1.01*PMIN
@@ -155,11 +155,11 @@
           IF (R3.GT.SEMI1.AND.GPERT.LT.1.0D-06) THEN
           ITERM = -1
           WRITE (6,20)  NAMEC(I1), NAMEC(I2), NAMEC(I3), ECC, EMAX,
-     &                  ECC1, SEMI, SEMI1, PMIN, PCRIT, ALPHA
+     &                  ECC1, SEMI, SEMI1, PMIN, ALPHA, GPERT
    20     FORMAT (' NEW HIARCH    NM =',3I6,'  E =',F6.3,'  EX =',F7.4,
      &                         '  E1 =',F6.3,'  A =',1P,E8.1,
      &                         '  A1 =',E8.1,'  PM =',E9.2,
-     &                         '  PC =',E9.2,'  IN =',0P,F7.1)
+     &                         '  IN =',0P,F7.1,'  G =',F7.3)
           RI = SQRT(CM(1)**2 + CM(2)**2 + CM(3)**2)
           Q0 = M(I3)/MB
           WRITE (81,30)  TIMEC, RI, NAMEC(I3), Q0, ECC, EMAX, ECC1,

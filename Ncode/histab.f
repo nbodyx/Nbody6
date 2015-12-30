@@ -55,19 +55,19 @@
       PMIN = SEMI1*(1.0 - ECC1)
 *
 *       Evaluate the basic stability condition without fudge factor.
-      Q = BODY(J)/BODY(I)
-      IF (ECC1.LT.1.0) THEN
-          XFAC = (1.0 + Q)*(1.0 + ECC1)/SQRT(1.0 - ECC1)
-      ELSE
-          XFAC = 40.0*(1.0 + Q)
-      END IF
-      PCRIT = 2.8*XFAC**0.4*SEMI
+*     Q = BODY(J)/BODY(I)
+*     IF (ECC1.LT.1.0) THEN
+*         XFAC = (1.0 + Q)*(1.0 + ECC1)/SQRT(1.0 - ECC1)
+*     ELSE
+*         XFAC = 40.0*(1.0 + Q)
+*     END IF
+*     PCRIT = 2.8*XFAC**0.4*SEMI
 *
 *       Exit if stability value falls outside practical limits.
-      IF ((PCRIT.GT.1.5*PMIN.OR.PCRIT.LT.0.5*PMIN).AND.J.LE.N) THEN
-          RSTAB = PCRIT
-          GO TO 20
-      END IF
+*     IF ((PCRIT.GT.1.5*PMIN.OR.PCRIT.LT.0.5*PMIN).AND.J.LE.N) THEN
+*         RSTAB = PCRIT
+*         GO TO 20
+*     END IF
 *
 *       Choose the most active triple in case of two binaries.
       JJ = J
@@ -108,11 +108,9 @@
   10  CONTINUE
       CALL INCLIN(XX,VV,X(1,I),XDOT(1,I),ANGLE)
 *
-*       Employ the improved stability criterion for doubtful cases.
-      RSTAB = stability(BODY(I1),BODY(I2),BODY(JJ),ECC,ECC1,ANGLE)*SEMI
-*       Note: the present stability routine includes inclination!
-*     RSTAB = YFAC*RSTAB
-      PCRIT = RSTAB
+      QST = QSTAB(ECC,ECC1,ANGLE,BODY(I1),BODY(I2),BODY(JJ))
+      RSTAB = QST*SEMI
+      PCRIT = RSTAB   ! Needed by routine MERGE.
       IPAIR = JPAIR
 *
    20 RETURN

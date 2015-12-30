@@ -55,9 +55,11 @@
                   VV(K,2) = 0.0
                   VV(K,3) = XDOT(K,J2)
     2         CONTINUE
+*
               CALL INCLIN(XX,VV,X(1,ICM),XDOT(1,ICM),ALPH)
-              PCR = stability(CM(1,IMERGE),CM(2,IMERGE),BODY(ICM),E0,E1,
-     &                                                       ALPH)*SEMI
+              QST = QSTAB(E0,E1,ALPH,CM(1,IMERGE),CM(2,IMERGE),
+     &                                            BODY(ICM))
+              PCR = QST*SEMI
               PM = SEMI1*(1.0 - E1)/PCR
               WRITE (84,3) TTOT, NAME(J1), NAME(J), KSTAR(J1), KSTAR(J),
      &                     KSTARM(IMERGE), E0, E1, PM, RM, P0, P1, SEMI1
