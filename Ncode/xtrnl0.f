@@ -204,7 +204,7 @@
 *       Define the asymptotic circular velocity due to halo.
               V02 = VCIRC**2
 *
-*       Include table of circular velocity on unit #51 (km/sec & kpc).
+*       Include table of circular velocity on unit #52 (km/sec & kpc).
               RI = 1000.0/RBAR
               DR = 1000.0/RBAR
               DO 60 K = 1,30
