@@ -22,10 +22,10 @@
       ELSE
           I1 = J2
           I2 = J1
-      END IF
+      ENDIF
 *
 *       Switch to #I2 if #I1 is a BH (standard case not affected).
-      IF (KSTAR(I1).EQ.14) THEN
+      IF (KSTAR(I1).EQ.14.AND.KZ(43).GE.2) THEN
           II = I1
           I1 = I2
           I2 = II
@@ -63,25 +63,32 @@
       RP1 = R(IPAIR)
       ISKIP = 0
 *
-*       Include special disruption treatment for BH + star (only #11 < 0).
-      IF (MAX(KSTAR(I1),KSTAR(I2)).EQ.14) THEN
+*       Include special disruption treatment for BH + star.
+      IF (MAX(KSTAR(I1),KSTAR(I2)).EQ.14.AND.KZ(43).GE.2) THEN
+*       Enforce coalescence of two black holes (extremely rare)..
+          IF (MIN(KSTAR(I1),KSTAR(I2)).EQ.14) THEN
+              COALS = .TRUE.
+              SEMI = SEMI0
+              GO TO 4
+          END IF
           DM1 = 0.1*BODY(I1)*ZMBAR
 *       Conserve total mass and specific energy (H = const here).
           M1 = M1 - DM1
           M2 = M2 + DM1
           R1 = RADIUS(I1)*SU
           R2 = RADIUS(I2)*SU
-          IF (TDOT2(IPAIR).LT.0.0D0) THEN
+*       Skip hyperbolic motion.
+          IF (H(IPAIR).LT.0.0) THEN
               CALL KSPERI(IPAIR)
               TIME = TBLOCK
-          END IF
 *       Transform to positive radial velocity and obtain global coordinates.
-          JPAIR = 0
-          CALL KSAPO(JPAIR)   ! note JPAIR = KSPAIR on return.
+              JPAIR = 0
+              CALL KSAPO(JPAIR)   ! note JPAIR = KSPAIR on return.
 *       Note zero argument which advances eccentric anomaly to R = SEMI.
-          T0(I1) = TBLOCK
-          WRITE (6,2)  R(IPAIR), TDOT2(IPAIR)
-    2     FORMAT (' KSAPO TRANSF    R TD2 ',1P,2E10.2)
+              T0(I1) = TBLOCK
+              WRITE (6,2)  R(IPAIR), TDOT2(IPAIR)
+    2         FORMAT (' KSAPO TRANSF    R TD2 ',1P,2E10.2)
+          END IF
           CALL RESOLV(IPAIR,1)
           COALS = .FALSE.
           SEMI = SEMI0
@@ -339,39 +346,36 @@
    30         CONTINUE
               TPREV = TIME - STEPX
 *
-*       Include safety condition to avoid ejection of BH.
-              IF (BODY(I1).GT.0.5*BODY(I)) THEN
-                  IF (I1.EQ.2*IPAIR-1) THEN
-                      I1 = 2*IPAIR
-                  ELSE
-                      I1 = 2*IPAIR - 1
-                  END IF
-              END IF
+*       Check for possible WD/NS/BH kick.
+              IF (KW1.GE.13.OR.KZ(25).GT.0) THEN
 *       Terminate KS binary and assign kick velocity to single star #I.
-              I = I1 + 2*(NPAIRS - IPAIR)
-              IF (BODY(I1).GT.0.5*BODY(N+IPAIR)) THEN
-                  WRITE (6,32)  NAME(I1), BODY(I1)*SMU
-   32             FORMAT (' DANGER EXPEL!    NM M ',I7,F7.2)
-                  STOP
-              END IF
-              CALL KSTERM
-              CALL KICK(I,1,KW1,DM)
+                  I = I1 + 2*(NPAIRS - IPAIR)
+                  IF (BODY(I1).GT.0.5*BODY(N+IPAIR)) THEN
+                      WRITE (6,32)  NAME(I1), BODY(I1)*SMU
+   32                 FORMAT (' DANGER EXPEL!    NM M ',I7,F7.2)
+                      STOP
+                  END IF
+                  IF (ISKIP.GT.0) KW1 = KSTAR(I1)
+                  CALL KSTERM
+                  CALL KICK(I,1,KW1,DM)
 *       Initialize new KS polynomials after velocity kick (H > 0 is OK).
-              ICOMP = IFIRST
-              JCOMP = IFIRST + 1
-              CALL KSREG
-              IPHASE = -1
+                  ICOMP = IFIRST
+                  JCOMP = IFIRST + 1
+                  CALL KSREG
+                  IPHASE = -1
 *
 *       Avoid negative radial velocity for same star (TD2 is small).
-              IF (ISKIP.GT.0.AND.TDOT2(NPAIRS).LT.0.0) THEN
-                  IF (ECC.GT.1.0) TDOT2(NPAIRS) = 0.0
-              END IF
+                  IF (ISKIP.GT.0.AND.TDOT2(NPAIRS).LT.0.0) THEN
+                      IF (ECC.GT.1.0) TDOT2(NPAIRS) = 0.0
+                  END IF
 *       Provide diagnostic output if binary survives the kick.
-              I = NTOT
+                  I = NTOT
+                  IPAIR = NPAIRS
+              END IF
               KSTAR(I) = 0
-              IF (H(NPAIRS).LT.0.0) THEN
-                  SEMI = -0.5d0*BODY(I)/H(NPAIRS)
-                  WRITE (6,35)  KW1, R(NPAIRS)/SEMI, SEMI*SU,
+              IF (H(IPAIR).LT.0.0) THEN
+                  SEMI = -0.5d0*BODY(I)/H(IPAIR)
+                  WRITE (6,35)  KW1, R(IPAIR)/SEMI, SEMI*SU,
      &                          BODY(I)*ZMBAR, (XDOT(K,I)*VSTAR,K=1,3)
    35             FORMAT (' WD/NS BINARY    KW R/A A M V ',
      &                                      I4,3F7.2,3F7.1)

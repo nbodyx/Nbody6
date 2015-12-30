@@ -43,6 +43,7 @@
 *
       tbgbf = (a(17) + a(18)*m**4 + a(19)*m**(11.d0/2.d0) + m**7)/
      &        (a(20)*m**2 + a(21)*m**7)
+      tbgbf = MAX(tbgbf,3.35d0)
 *
       return
       end
@@ -402,6 +403,8 @@
 * (JH 24/11/97)
 *
       a1 = MIN(a(20)/m**a(21),a(22)/m**a(23))
+*     a1 = 0.5d0*a1
+*     a1 = 0.6d0*a1
       rgbf = a1*(lum**a(18) + a(17)*lum**a(19))
 *
       return
@@ -416,6 +419,7 @@
 * (JH 24/11/97)
 *
       a1 = MIN(a(20)/m**a(21),a(22)/m**a(23))
+*     a1 = 0.5d0*a1
       rgbdf = a1*(a(18)*lum**(a(18)-1.d0) + 
      &            a(17)*a(19)*lum**(a(19)-1.d0))
 *
@@ -841,16 +845,23 @@
       real*8 FUNCTION rpertf(m,mew,r,rc)
       implicit none
       real*8 m,mew,r,rc
-      real*8 a,b,c,q
+      real*8 a,b,c,q,fac,facmax
 *
 * A function to obtain the exponent that perturbs radius.
 *
-      a = 0.1d0
-      b = 0.006d0*MAX(1.d0,2.5d0/m)
-      c = 3.d0
-      q = log(r/rc)
-      rpertf = ((1.d0 + b**c)*((mew/b)**c)*(mew**(a/q)))/
-     &         (1.d0+(mew/b)**c)
+      if(mew.le.0.d0)then
+         rpertf = 0.d0
+      else
+         a = 0.1d0
+         b = 0.006d0*MAX(1.d0,2.5d0/m)
+         c = 3.d0
+         q = log(r/rc)
+         fac = a/q
+         facmax = -14.d0/log10(mew)
+         fac = MIN(fac,facmax)
+         rpertf = ((1.d0 + b**c)*((mew/b)**c)*(mew**fac))/
+     &            (1.d0+(mew/b)**c)
+      endif
 *
       return
       end

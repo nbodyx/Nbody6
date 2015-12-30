@@ -58,7 +58,7 @@
 *
 *
       mass0 = mass
-      if(mass0.gt.100.d0) mass = 100.d0
+*     if(mass0.gt.100.d0) mass = 100.d0
 *
       if(kw.ge.7.and.kw.le.9) goto 90
       if(kw.ge.10) goto 95
@@ -217,7 +217,10 @@
 * Get an idea of when Mc,C = Mc,C,max on the AGB
       tau = tscls(2) + tscls(3)
       mc2 = mcgbtf(tau,GB(8),GB,tscls(7),tscls(8),tscls(9))
-      mcmax = MAX(MAX(mch,0.773d0*mcbagb - 0.35d0),1.05d0*mc2)
+      mcmax = MAX(MAX(mch,0.773d0*mcbagb - 0.35d0),1.02d0*mc2)
+      if(mcbagb.ge.1.6d0.and.mcbagb.le.2.25d0)then
+         mcmax = MAX(MAX(1.372d0,0.773d0*mcbagb - 0.35d0),1.02d0*mc2)
+      endif
 *
       if(mcmax.le.mc1)then
          if(mcmax.le.GB(7))then
@@ -241,10 +244,10 @@
          endif
       endif
       tscls(14) = MAX(tbagb,tscls(14))
-      if(mass.ge.100.d0)then
-         tn = tscls(2)
+*     if(mass.ge.100.d0)then
+*        tn = tscls(2)
 *        goto 100
-      endif
+*     endif
 *
 * Calculate the nuclear timescale - the time of exhausting
 * nuclear fuel without further mass loss.
@@ -366,6 +369,7 @@
 *
  95   continue
       tm = 1.0d+10
+      tscls(1) = tm
  96   continue
       tn = 1.0d+10
 *

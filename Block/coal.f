@@ -329,21 +329,23 @@
    25             CONTINUE
 *       Create ghost for rare case of massless first component.
                   IF (BODY(J).EQ.0.0D0) THEN
-                      DO 26 K = 1,3
-                         X0(K,I1) = MIN(1.0d+04 + (X(K,I1)-RDENS(K)),
-     &                             1000.d0*RSCALE*(X(K,I1)-RDENS(K))/RI)
-                          X(K,I1) = X0(K,I1)
-                          X0DOT(K,I1) = SQRT(0.004d0*ZMASS/RSCALE)*
-     &                                               XDOT(K,I1)/VI
-                          XDOT(K,I1) = X0DOT(K,I1)
-                          F(K,I1) = 0.d0
-                          FDOT(K,I1) = 0.d0
-                          D2(K,I1) = 0.d0
-                          D3(K,I1) = 0.d0
-   26                 CONTINUE
-                      T0(I1) = 1.0D+06
-                      WRITE (6,28)  NAME(I1), KW1
-   28                 FORMAT (' MASSLESS PRIMARY!    NAM KW ',I8,I4)
+                     IF(J.EQ.I1)THEN
+                        DO 26 K = 1,3
+                           X0(K,I1) = MIN(1.0d+04 + (X(K,I1)-RDENS(K)),
+     &                            1000.d0*RSCALE*(X(K,I1)-RDENS(K))/RI)
+                           X(K,I1) = X0(K,I1)
+                           X0DOT(K,I1) = SQRT(0.004d0*ZMASS/RSCALE)*
+     &                                                XDOT(K,I1)/VI
+                           XDOT(K,I1) = X0DOT(K,I1)
+                           F(K,I1) = 0.d0
+                           FDOT(K,I1) = 0.d0
+                           D2(K,I1) = 0.d0
+                           D3(K,I1) = 0.d0
+   26                   CONTINUE
+                        T0(I1) = 1.0D+06
+                        WRITE (6,28)  NAME(I1), KW1
+   28                   FORMAT (' MASSLESS PRIMARY!    NAM KW ',I8,I4)
+                     ENDIF
                   ELSE
                       CALL FPOLY1(J,J,0)
                       CALL FPOLY2(J,J,0)
@@ -407,10 +409,10 @@
       CALL FLUSH(12)
 *
       WRITE (6,55)  WHICH1, IQCOLL, NAME1, NAME2, KSTAR(I1), KSTAR(I2),
-     &              KW1, ZMNEW*ZMBAR, RCOLL, EB, DP, DM*ZMBAR, VINF
+     &              KW1, ZMNEW*ZMBAR, RCOLL, EB, ECC, DM*ZMBAR, VINF
    55 FORMAT (/,A8,'COAL    IQ =',I3,'  NAME =',2I6,'  K* =',3I3,
      &             '  M =',F6.2,'  RCOLL =',1P,E8.1,'  EB =',E9.1,
-     &             '  DP =',E9.1,'  DM =',0P,F6.2,'  VINF =',F5.1)
+     &             '  ECC =',0P,F9.5,'  DM =',F6.2,'  VINF =',F5.1)
       CALL FLUSH(6)
 *
       KSTAR(I1) = KW1

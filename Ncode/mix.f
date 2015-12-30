@@ -186,7 +186,11 @@
 *
  101     XX=0.5*(LEFT + RIGHT)
          IC = IC + 1
-         IF (IC.GT.100) STOP
+         IF (IC.GT.100) THEN
+             WRITE(6,98)K1,K2
+ 98          FORMAT('MIX PRE-MS IC STOP ',2I4)
+             STOP
+         ENDIF
          IF(ABS(PREMSF(M3,XX,RR)).LE.ERR)GOTO 103
          IF(ABS(PREMSF(M3,XX,RR)).GT.ERR)GOTO 102
 *

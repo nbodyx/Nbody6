@@ -101,7 +101,7 @@
          CALL hrdiag(M0,AGE,M1,TM,TN,TSCLS,LUMS,GB,ZPARS,
      &               RM,LUM,KW,MC1,RCC,MENV,RENV,K2)
          dr = rm - rm0
-         if(ABS(dr).gt.0.1*rm0)then
+         if(ABS(dr).gt.0.1*rm0.and.kw.lt.10)then
             dtm = dtr - age0*eps
             dtdr = dtm/ABS(dr)
             dtm = alpha2*MAX(rm,rm0)*dtdr
@@ -123,6 +123,7 @@
       dr = rm - rm0
       it = it + 1
       if(it.eq.20.and.kw.eq.4) goto 30
+      if(kw.ne.kw0.and.kw.ge.13) goto 30
       IF(IT.GT.30)THEN
          WRITE (6,22) IT, KSTAR(I), M0, DR, RM
    22    FORMAT (' DANGER!    TRDOT: IT K* M0 DR RM ',2I4,1P,3E10.2)
@@ -136,6 +137,17 @@
       endif
 *
  30   continue
+*
+* Ensure that change of type has not occurred during radius check. 
+* This is rare but may occur for HG stars of ZAMS mass > 50 Msun 
+* or some cases at the upper end of the mass range for EC SNe. 
+*
+         if(kw.ne.kw0)then
+            kw = kw0
+            m0 = body0(i)*zmbar
+            m1 = m10
+            CALL star(kw,m0,m1,tm,tn,tscls,lums,GB,zpars)
+         endif
 *
 *       Impose a lower limit and convert time interval to scaled units.
       DTM = MAX(DTM,1.0D-04)/TSTAR

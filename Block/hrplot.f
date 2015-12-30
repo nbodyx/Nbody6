@@ -142,8 +142,8 @@
               RI = MIN(RI,99.0D0)
               R1 = LOG10(RM)
               ZL1 = LOG10(LUM)
-*       Form LOG(Te) using L = 4*pi*R**2*\sigma*T**4 and solar value 3.7.
-              TE = 0.25*(ZL1 - 2.0*R1) + 3.7
+*       Form LOG(Te) using L = 4*pi*R**2*\sigma*T**4 and solar value 3.76.
+              TE = 0.25*(ZL1 - 2.0*R1) + 3.76
               WRITE (83,10)  NAME(I), KW, RI, M1, ZL1, R1, TE
    10         FORMAT (I10,I4,5F10.3)
               NSTAR = NSTAR + 1

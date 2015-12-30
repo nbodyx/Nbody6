@@ -12,8 +12,8 @@
       COMMON/MODES/  EB0(NTMAX),ZJ0(NTMAX),ECRIT(NTMAX),AR(NTMAX),
      &               BR(NTMAX),EOSC(4,NTMAX),EDEC(NTMAX),TOSC(NTMAX),
      &               RP(NTMAX),ES(NTMAX),CM(2,NTMAX),IOSC(NTMAX),
-     &               NAMEC(NTMAX)
-      INTEGER JX(2),KACC,MLIST(10000)
+     &               NAMEC(NTMAX),MLIST(NMAX)
+      INTEGER JX(2),KACC
       REAL*8 MASS(2),MASSC(2),RAD(2),RADC(2),LUMIN(2)
       REAL*8 AGE0(2),TM0(2),TBGB(2),MENV(2),RENV(2),K2STR(2)
       REAL*8 TSCLS(20),LUMS(10),GB(10),TM,TN
@@ -57,7 +57,7 @@
           END IF
     2 CONTINUE
       IF (ML0.EQ.0) GO TO 810
-      IF (ML0.GE.10000) THEN
+      IF (ML0.GE.NMAX) THEN
           WRITE (6,3)  ML0, TIME
     3     FORMAT (' DANGER!    MDOT LIMIT   ML T',I5,F8.2)
           STOP
@@ -833,38 +833,19 @@
      &            KSTAR(N+KSPAIR).GE.0).OR.
 *    &            (KW.NE.KSTAR(I).AND.KW.GE.13)) THEN
      &            (KW.NE.KSTAR(I).AND.
-     &            (KW.GE.13.OR.(KW.GE.11.AND.KZ(25).GE.1).OR.
-     &            (KW.EQ.10.AND.KZ(25).GT.1)))) THEN
-*
-                      J1 = 2*KSPAIR - 1
-                      IF (LIST(1,J1).EQ.0) NSTEPQ = NSTEPQ + 1
-*       Distinguish between perturbed and unperturbed case.
-                      J1 = 2*KSPAIR - 1
-                      IF (LIST(1,J1).EQ.0.AND..NOT.ICORR) THEN
-                          H00 = H(KSPAIR)
-*       Expand unperturbed orbit at constant eccentricity (KS = 0 no KSREG).
-                          CALL HCORR(I,DM,RNEW)  ! note c.m. updated here.
-                          KS = 0
-      WRITE (6,32)  NAME(J1), DM*SMU, R(KSPAIR), H(KSPAIR), H00-H(IPAIR)
-   32 FORMAT (' ZERO!!!   NM1 DMS R H DH ',I7,F7.3,1P,5E10.2)
-      CALL FLUSH(6)
-      IF (DM*SMU.GT.1.0D-05) STOP
-                      ELSE
-*       Treat general case as two single particles.
-                          I = I + 2*(NPAIRS - KSPAIR)
-                          JX(K) = I
-                          IF(KACC.EQ.2)THEN
-                             JX(3-K) = JX(3-K) + 2*(NPAIRS - KSPAIR)
-                          ENDIF
+     &            (KW.GE.13.OR.(KW.GE.10.AND.KZ(25).GT.0)))) THEN
+                  I = I + 2*(NPAIRS - KSPAIR)
+                  JX(K) = I
+                  IF(KACC.EQ.2)THEN
+                     JX(3-K) = JX(3-K) + 2*(NPAIRS - KSPAIR)
+                  ENDIF
 *       Predict current KS variables and save at end of routine RESOLV.
-                          CALL RESOLV(KSPAIR,3)
-                          IPHASE = 2
-                          IPOLY = -1
-                          JCOMP = 0
-                          CALL KSTERM
-      NESC = NESC + 1
-                          KS = 1
-                      END IF
+                  CALL RESOLV(KSPAIR,3)
+                  IPHASE = 2
+                  IPOLY = -1
+                  JCOMP = 0
+                  CALL KSTERM
+                  KS = 1
                ELSE IF (DM.NE.0.D0) THEN
 *       Implement mass loss and expand KS orbit at constant eccentricity.
                   CALL HCORR(I,DM,RNEW)
@@ -876,8 +857,7 @@
      &             NAME(N+KSPAIR).GT.-2*NZERO.AND.DM.GT.0.0D0.AND.
 *    &             H(KSPAIR) + DM/SEMI.LT.-ECLOSE.AND.KW.LT.13) THEN
      &             H(KSPAIR) + DM/SEMI.LT.-ECLOSE.AND.
-     &             (KW.LT.10.OR.(KW.LT.11.AND.KZ(25).LT.2).OR.
-     &             (KW.LT.13.AND.KZ(25).LT.1))) THEN
+     &             (KW.LT.10.OR.(KW.LT.13.AND.KZ(25).LT.1))) THEN
                   CALL HCORR(I,DM,RNEW)
                ELSEIF(DM.GT.0.D0)THEN
                   IPHASE = 7
@@ -894,7 +874,7 @@
      &                          2I6,I4,2F8.1,2F6.1)
          END IF
 *
-*       Perform neighbour force corrections on significant mass loss (no WD).
+*       Perform neighbour force corrections on significant mass loss.
          IF (ICORR) THEN
 *
 *       Include optional diagnostics for mass loss orbit (filename MDOT).
@@ -915,14 +895,13 @@
 *       Accumulate total mass loss (solar units) and reduce cluster mass.
             ZMDOT = ZMDOT + DMSUN
             ZMASS = ZMASS - DM
-*       Update the maximum single body mass from current star.
-            BODY1 = MAX(BODY1,MASS(K)/ZMBAR)
-*           IF(MASS(K)/ZMBAR.GE.0.99*BODY1.AND.NSUB.EQ.0)THEN
-*              BODY1 = 0.d0
-*              DO 35 J = 1,N
-*                 BODY1 = MAX(BODY1,BODY(J))
-* 35           CONTINUE
-*           ENDIF
+*       Update the maximum single body mass but skip compact subsystems.
+            IF(MASS(K)/ZMBAR.GE.0.99*BODY1.AND.NSUB.EQ.0)THEN
+               BODY1 = 0.d0
+               DO 35 J = 1,N
+                  BODY1 = MAX(BODY1,BODY(J))
+  35           CONTINUE
+            ENDIF
 *
 *       Update the mass loss counters for types > 2.
             IF(KW.EQ.3)THEN
@@ -992,13 +971,12 @@
 *
 *       Define logical variable to control optional WD kicks (avoids NaN).
             IKICK = .FALSE.
-            IF (KZ(25).EQ.1.AND.(KW.EQ.10.OR.KW.EQ.11)) IKICK = .TRUE.
-            IF (KZ(25).EQ.2.AND.KW.EQ.12) IKICK = .TRUE.
+            IF (KZ(25).GT.0.AND.KW.GE.10.AND.KW.LE.12) IKICK = .TRUE.
 *       Ensure all NS/BH are assigned a kick (might depend on DM).
             IF (KW.EQ.13.OR.KW.EQ.14) IKICK = .TRUE.
 *
 *       Perform total force & energy corrections (delay dF if DMSUN > 0.1).
-            IF (DMSUN.LT.0.1.AND.(KW.LT.10.OR..NOT.IKICK)) THEN
+            IF (DMSUN.LT.0.05.AND.(KW.LT.10.OR..NOT.IKICK)) THEN
                 CALL FICORR(I,DM)
             ELSE
                 CALL FCORR(I,DM,KW)
@@ -1013,8 +991,6 @@
 *       Obtain new F & FDOT and time-steps (no gain skipping WDs).
                DO 50 L = 2,NNB2
                   J = ILIST(L)
-*       Skip possible ghost during merger (bug 6/15).
-                  IF (BODY(J).EQ.0.0D0) GO TO 50
                   IF (L.EQ.NNB2) J = I
 *                 CALL DTCHCK(TIME,STEP(J),DTK(MAXBLK)) ! no effect (08/10).
                   DO 45 KK = 1,3
@@ -1146,7 +1122,7 @@
          EPOCH(I) = AGE0(K) + EPCH0(K) - AGE
 *        TEV(I) = (AGE0(K) + EPCH0(K))/TSTAR
          TEV(I) = TEVK
-         TEV0(I) = TEVK
+         TEV0(I) = TEV(I)
 *        IF(I.EQ.IGHOST.OR.BODY(I).LE.0.0) RM0 = M1
          CALL TRDOT(I,DTM,M1)
          TEV(I) = TEV(I) + DTM
@@ -1376,21 +1352,21 @@
       IF (IMERGE.LE.NMERGE) GO TO 104
 *
 *       Update the maximum single body mass but skip compact subsystems.
-*     IF(NSUB.EQ.0)THEN
-*        BODY1 = 0.d0
-*        DO 110 J = 1,N
-*           BODY1 = MAX(BODY1,BODY(J))
-* 110    CONTINUE
-*     ENDIF
+      IF(NSUB.EQ.0)THEN
+         BODY1 = 0.d0
+         DO 110 J = 1,N
+            BODY1 = MAX(BODY1,BODY(J))
+  110    CONTINUE
+      ENDIF
 *
-*     DO 122 J = N+1,NTOT
-*        IF(KSTAR(J).EQ.0.AND.NAME(J).GT.0.AND.TEV(J).LT.9.9E+09.AND.
-*    &      BODY(J).GT.0.0.AND.KZ(28).EQ.0)THEN
-*           WRITE(6,556)J,NAME(J),TEV(J)
-*           TEV(J) = 1.0d+10
-*556        FORMAT(' MDOT TEV SMALL ',2I8,1P,E10.2)
-*        ENDIF
-*122  CONTINUE
+      DO 122 J = N+1,NTOT
+         IF(KSTAR(J).EQ.0.AND.NAME(J).GT.0.AND.TEV(J).LT.9.9E+09.AND.
+     &      BODY(J).GT.0.0.AND.KZ(28).EQ.0)THEN
+            WRITE(6,556)J,NAME(J),TEV(J)
+            TEV(J) = 1.0d+10
+  556       FORMAT(' MDOT TEV SMALL ',2I8,1P,E10.2)
+         ENDIF
+  122  CONTINUE
 *
 *       Ensure re-initialization of ICPERT (INTGRT) and KBLIST (SUBINT).
   810 IF (IPOLY.LT.0) THEN
@@ -1399,16 +1375,6 @@
       ELSE IF (IPOLY.GT.0) THEN
           IPHASE = IPOLY
       END IF
-*     DO 888 IPAIR = 1,NPAIRS
-*     I1 = 2*IPAIR - 1
-*     DO 885 I = I1,I1+1
-*     IF (TEV0(I).GT.TIME) THEN
-*     WRITE (6,886) I, KSTAR(I), NAME(I), TIME, TEV0(I), TEV(I)
-* 886 FORMAT (' WARN!   I K* NM T TE0 TE ',I5,I4,I6,1P,3E10.2)
-*     STOP
-*     END IF
-* 885 CONTINUE
-* 888 CONTINUE
 *
       RETURN
 *
