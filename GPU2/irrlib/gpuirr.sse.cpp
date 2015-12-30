@@ -239,7 +239,8 @@ struct Predictor{
 };
 
 struct NBlist{
-	enum{ NB_MAX = 511 + 16 };
+	// enum{ NB_MAX = 512 + 88 };
+	enum{ NB_MAX = 699 + 128}; // 2015 Oct
 	int nnb;
 	int nb[NB_MAX];
 

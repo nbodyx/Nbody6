@@ -313,9 +313,6 @@
           DT = MAX(DT,TK)
           CALL STEPK(DT,DTN)
           STEP(I1) = DTN
-      ELSE IF (KZ(11).NE.0) THEN
-*       Copy JCL to COMMON (case NP > 0) for ksint.f (not used in ksintp.f).
-          JCLOSE = JCL
       END IF
       ISTAT(KCASE) = JPHASE
 *

@@ -133,6 +133,7 @@
      &                     BODY(JCOMP)*FI(K,JCOMP))/BODY(ICM)
               D1(K,ICM) = (BODY(ICOMP)*D1(K,ICOMP) +
      &                     BODY(JCOMP)*D1(K,JCOMP))/BODY(ICM)
+              FIDOT(K,ICM) = D1(K,ICM)
               FIRR = FIRR + FI(K,ICM)**2
               FDIRR = FDIRR + D1(K,ICM)**2
               RI2 = RI2 + (X(K,ICM) - RDENS(K))**2

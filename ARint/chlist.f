@@ -19,10 +19,10 @@
       DATA ITER /0/
 *
 *
-*    IF (I.EQ.0) I = ICH
+*    IF (II.EQ.0) I = ICH
 *       Form perturber list based on RMIN, RGRAV and GMIN/50.
       RPERT = MIN(RMIN,SEMIGR*(1.0 + ECCGR))
-      RPERT = 6.0*RPERT
+      RPERT = 3.0*RPERT
       IF (SEMIGR.LT.0.2*RMIN) RPERT = 10.0*SEMIGR
 *       Use 5 x harmonic mean of RMIN & RGRAV for basic search distance.
 *     RPERT = 5.0*RMIN*ABS(RGRAV)/(RMIN + ABS(RGRAV))
@@ -62,7 +62,8 @@
       LISTC(1) = NNB1 - 1
 *
 *       Form current perturbation from nearest body (effective value RPERT).
-      RP = MIN(RGRAV,RMIN)
+*     RP = MIN(RGRAV,RMIN)
+      RP = 0.5*RSUM
       IF (NCH.EQ.2) RP = RGRAV
       GPERT = 2.0*PMAX*RP**3/BODY(ICH)
 *

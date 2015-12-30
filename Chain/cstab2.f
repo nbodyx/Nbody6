@@ -21,6 +21,7 @@
       MB = M(I1) + M(I2)
       MB1 = MB + M(I3)
       MB2 = MB1 + M(I4)
+      ITERM = 0
 *
 *       Form output diagnostics with smallest binary as one body.
       VREL2 = 0.0D0
@@ -68,61 +69,37 @@
       SEMI1 = 1.0/SEMI1
       ECC1 = SQRT((1.0D0 - R4/SEMI1)**2 + RDOT4**2/(SEMI1*MB2))
 *
-*       Skip if innermost triple is not stable (including ECC > 1).
+*       Skip if innermost triple is not stable (including ECC & ECC1 > 1).
       RB0 = SQRT(RB0)
       SEMI0 = 2.0/RB0 - VREL2/MB
       SEMI0 = 1.0/SEMI0
-      IF (SEMI0.LT.0.0.OR.ECC.GT.1.0) GO TO 40
+      IF (SEMI0.LT.0.0.OR.ECC.GT.1.0.OR.ECC1.GT.1.0) GO TO 40
       ECC0 = SQRT((1.0 - RB0/SEMI0)**2 + RDOT**2/(SEMI0*MB))
-      PCRIT0 = stability(M(I1),M(I2),M(I3),ECC0,ECC,0.0D0)*SEMI0
-*       Allow 10% extra with MA 1999 (proper test done for outer triple).
-      PMIN0 = 1.1*SEMI*(1.0 - ECC)
-      IF (PMIN0.LT.PCRIT0) GO TO 40
-*
-*       Form hierarchical stability ratio (Eggleton & Kiseleva 1995).
-*     QL = MB1/M(I4)
-*     Q1 = MAX(MB/MB1,MB1/MB)
-*     Q3 = QL**0.33333
-*     Q13 = Q1**0.33333
-*     AR = 1.0 + 3.7/Q3 - 2.2/(1.0 + Q3) + 1.4/Q13*(Q3 - 1.0)/(Q3 + 1.0)
-*
-*     EK = AR*SEMI*(1.0D0 + ECC)
-      PMIN = SEMI1*(1.0D0 - ECC1)
-*
 *       Obtain the inclination (in radians).
       CALL INCLIN(XX,VV,XCM3,VCM3,ALPHA)
+*       Evaluate the Valtonen stability criterion.
+      QST = QSTAB(ECC0,ECC,ALPHA,M(I1),M(I2),M(I3))
+      PCRIT0 = QST*SEMI0
+      IF (SEMI*(1.0 - ECC).LT.QST*SEMI0) GO TO 40
 *
-*       Replace the EK criterion by the MA 1999 stability formula.
-      PC99 = stability(MB,M(I3),M(I4),ECC,ECC1,ALPHA)*SEMI
-*
-*       Evaluate the general stability function.
-      IF (ECC1.LT.1.0) THEN
-          NST = NSTAB(SEMI,SEMI1,ECC,ECC1,ALPHA,MB,M(I3),M(I4))
-          IF (NST.EQ.0) THEN
-              PCRIT = 0.99*PMIN
-          ELSE
-              PCRIT = 1.01*PMIN
-          END IF
-      ELSE
-          PCRIT = 1.01*PMIN
-      END IF
+*       Evaluate the general stability function for outer triple.
+      QST = QSTAB(ECC,ECC1,0.0D0,MB,M(I3),M(I4))
+      PMIN0 = SEMI*(1.0 - ECC)
 *
 *       Check hierarchical stability condition (SEMI1 > 0 => ECC1 < 1).
-      ITERM = 0
-      IF (PMIN.GT.PCRIT.AND.SEMI.GT.0.0.AND.SEMI1.GT.0.0) THEN
+      PMIN = SEMI1*(1.0D0 - ECC1)
+      IF (PMIN.GT.QST*SEMI.AND.SEMI.GT.0.0.AND.SEMI1.GT.0.0) THEN
           ITERM = -1
-          WRITE (6,20)  ECC, ECC1, SEMI, SEMI1, PMIN, PCRIT, PC99
+          WRITE (6,20)  ECC, ECC1, SEMI, SEMI1, PMIN, QST*SEMI
    20     FORMAT (' CSTAB2    E =',F6.3,'  E1 =',F6.3,'  A =',1P,E8.1,
-     &                     '  A1 =',E8.1,'  PM =',E9.2,'  PC =',E9.2,
-     &                     '  PC99 =',E9.2)
+     &                     '  A1 =',E8.1,'  PM =',E9.2,'  PC =',E9.2)
           WRITE (6,25)  NAMEC(I1), NAMEC(I2), ECC0, SEMI0, PMIN0, PCRIT0
    25     FORMAT (' INNER TRIPLE    NAM E0 A0 PM0 PC0 ',
      &                              2I6,F7.3,1P,3E10.2)
           RI = SQRT(CM(1)**2 + CM(2)**2 + CM(3)**2)
-          EMAX = 0.0
-          WRITE (81,30)  TIMEC, RI, NAMEC(I3), ECC, ECC1,
-     &                   SEMI, SEMI1, PCRIT/PMIN, 180.*ALPHA/3.14, EMAX
-   30     FORMAT (F9.5,F5.1,I6,2F6.3,1P,2E10.2,0P,F5.2,F6.1,F6.3)
+          WRITE (81,30)  TIMEC, RI, NAMEC(I3), ECC, ECC1
+     &                   SEMI, SEMI1, PCRIT/PMIN, 180.*ALPHA/3.14
+   30     FORMAT (' CSTAB2   ',F9.5,F5.1,I6,2F6.3,1P,E10.2,0P,F6.1)
           CALL FLUSH(81)
       END IF
 *

@@ -327,16 +327,8 @@
       NSTEP1 = NSTEP1 + 1
       TPR0 = TPR
 *
-*       Predict perturbers & XC, UC and form new LISTC every 10 steps.
-      IF (MOD(NSTEP1,10).EQ.0) THEN
-          JJ = 0
-          CALL XCPRED(2)
-          CALL CHLIST(JJ)
-      ELSE
-*       Perform fast prediction of XC & UC every step (#ICH in INTGRT).
-          CALL XCPRED(0)
-      END IF
-*
+*     WRITE (6,800)  NSTEP1, ENERGY, GPERT, (1.0/RINV(K),K=1,N-1)
+* 800 FORMAT (' WATCH!   # ENERGY G R ',I6,F12.6,1P,6E10.2)
 *       Save new step during standard integration for subsequent restart.
    22 IF (ICALL.EQ.0.AND.ICOLL.EQ.0) THEN
           SAVEIT = STEP
@@ -390,7 +382,7 @@
               IT = IT + 1
               go to 28
           end if
-          IF (KZ26.GE.2) CALL SLOW(Y)
+          CALL SLOW(Y)
           go to 20
       end if
 *
@@ -404,7 +396,6 @@
       IF (KZ30.GT.2) THEN
           WRITE (6,30)  STEP, TMAX-CHTIME, GPERT, (1.0/RINV(K),K=1,N-1)
    30     FORMAT (' CHAIN:   STEP TM-CHT G R  ',1P,8E9.1)
-      CALL FLUSH(6)
       END IF
 *
 *       Determine two-body distances for stability test and collision search.
@@ -645,7 +636,7 @@
           IF (ISW.GT.1) NREG = NREG + 1
 *       Update slow-down if relevant (avoids perturbation jump).
           IF (KSLOW.AND.ISW.GT.1) THEN
-              IF (KZ26.GE.2) CALL SLOW(Y)
+              CALL SLOW(Y)
           END IF
       END IF
 *
@@ -665,6 +656,9 @@
 *       Update RGRAV in case of compact initial size.
               RGRAV = MIN(SUM/ABS(ENERGY),0.5*RSUM)
               CALL CHMOD(ISUB,KCASE)
+*       Delay termination but allow CHAIN ESCAPE to take place (KCASE = -2).
+              IF (KCASE.EQ.-1.AND.RSUM.LT.20.0*RGRAV.AND.
+     &        GPERT.LT.0.1) KCASE = 0
               IF (KCASE.GT.0) THEN
                   CALL RECOIL(1)
                   GO TO 10
@@ -692,12 +686,10 @@
       END IF
 *
 *       Check hierarchical stability condition for triple or quad.
-   60 IF (N.EQ.3) THEN
-          IF (RSUM.GT.4.0*RM) THEN
-              CALL CHSTAB(ITERM)
-              IF (ITERM.LT.0) GO TO 70
-          END IF
-      ELSE IF (N.EQ.4) THEN
+   60 IF (N.EQ.3.AND.MOD(NSTEP1,100).EQ.0) THEN
+          CALL CHSTAB(ITERM)
+          IF (ITERM.LT.0) GO TO 70
+      ELSE IF (N.EQ.4.AND.MAX(RINV(1),RINV(N-1)).LT.0.1*RSUM) THEN
           IF (RM.LT.0.1*RSUM) THEN
 *       Find largest separation to distinguish triple or quad case.
               RX = 1.0D+10
@@ -715,6 +707,8 @@
               ELSE IF (RM.LT.0.01*RSUM.AND.IX.NE.2) THEN
                   CALL CSTAB2(ITERM)
               END IF
+*       Enforce termination after 100,000 steps (failed stability test).
+              IF (NSTEP1.GE.100000) ITERM = -1
               IF (ITERM.LT.0) GO TO 70
           END IF
 *       Reduce five/six-body system to triple if biggest binary < 0.04*RSUM.

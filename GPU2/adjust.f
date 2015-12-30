@@ -264,8 +264,8 @@
      &    AND.ZKIN.GT.0.0) THEN
           TCR = 2.0*RSCALE/SQRT(2.0*ZKIN/ZMASS)
       END IF
-*       Update maximum NNB used by GPU & GPUCOR (without affecting average).
-      NBMAX = MIN(NNBMAX+150,LMAX-5)
+*       Update maximum NNB used by GPU & GPUCOR (NB! not too near NNBMAX).
+      NBMAX = MAX(NNBMAX+50,LMAX-100)
 *
 *       Print energy diagnostics & KS parameters.
       ICR = TTOT/TCR

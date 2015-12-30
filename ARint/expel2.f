@@ -37,7 +37,7 @@
       ZMB0 = BODY(I1) + BODY(I2)
       ZMU0 = BODY(I1)*BODY(I2)/ZMB0
 *
-*       Accumulate c.m. variables for dominant bodies.
+*       Accumulate c.m. variables for dominant bodies I1 & I2.
       RIJ2 = 0.d0
       VIJ2 = 0.d0
       VCM2 = 0.d0
@@ -66,15 +66,6 @@
 *       Obtain SEMI0 & HI from EBS because of some velocity bug (19/8/96).
       SEMI0 = -0.5d0*M(K10)*M(K20)/EBS
       HI = -0.5d0*(M(K10) + M(K20))/SEMI0
-*
-*       Update the stars to previous latest time (only for original KS pair).
-*     ID = 0
-*       Check original identity (NCH=3 may have been reduced from B-B).
-*     DO 2 L = 1,2
-*         IF (NAME(I1) + NAME(I2).EQ.KSAVE(2*L)) THEN
-*             ID = 1
-*         END IF
-*   2 CONTINUE
       TEV1 = MAX(TEV0(I1),TEV0(I2))
 *
 *       Specify basic parameters for both stars.
@@ -91,6 +82,30 @@
       JSPIN2 = SPIN(I2)*SPNFAC
       KW2 = KSTAR(I2)
       SEP = SEMI0*SU
+      ISKIP = 0
+*
+*       Include special disruption treatment for BH + star.
+      IF (MAX(KSTAR(I1),KSTAR(I2)).EQ.14) THEN
+          IF (BODY(I1).GT.BODY(I2)) THEN
+              II = I1
+              I1 = I2
+              I2 = II
+              KK = KW1
+              KW1 = KW2
+              KW2 = KK
+          END IF
+          DM1 = 0.5*BODY(I1)*ZMBAR
+*       Conserve total mass and specific energy (H = const here).
+          M1 = M1 - DM1
+          M2 = M2 + DM1
+          R1 = RADIUS(I1)*SU
+          R2 = RADIUS(I2)*SU
+          COALS = .FALSE.
+          SEMI = SEMI0
+          ISKIP = 1
+*       Skip common envelope part for BH + star interaction.
+          GO TO 4
+      END IF
 *
 *       Perform common envelope evolution (note: SEP in SU).
       CALL COMENV(M01,M1,MC1,AJ1,JSPIN1,KW1,
@@ -120,8 +135,8 @@
 *
       DMSUN = M1 + M2 - ZMB0*SMU
       IF (ABS(DMSUN).LT.1.0D-12.AND..NOT.COALS) THEN
-*         WRITE (78,7) TIME, ECC, DMSUN, SEMI0*SU-SEP
-*   7     FORMAT (' FAIL - CHAIN   T E DMS DSEP ',F10.4,F8.4,1P,2E10.2)
+*         WRITE (78,3) TIME, ECC, DMSUN, SEMI0*SU-SEP
+*   3     FORMAT (' FAIL - CHAIN   T E DMS DSEP ',F10.4,F8.4,1P,2E10.2)
 *         CALL FLUSH(78)
           IPHASE = 0
           GO TO 70
@@ -139,7 +154,7 @@
       SPIN(I2) = JSPIN2/SPNFAC
 *
 *       Update initial & chain masses (M2 = 0 for coalescence).
-      BODY0(I1) = M01/ZMBAR
+    4 BODY0(I1) = M01/ZMBAR
       BODY0(I2) = M02/ZMBAR
       M(K10) = M1/ZMBAR
       M(K20) = M2/ZMBAR
@@ -155,7 +170,7 @@
 *       Check for TZ object formed by CE evolution.
           IF(KSTAR(I2).GE.13.AND.KW1.GE.13)THEN
               NTZ = NTZ + 1
-              WRITE (6,10)  M1, M2
+              WRITE (3,10)  M1, M2
    10         FORMAT (' NEW TZ    M1 M2 ',2F7.2)
           ENDIF
           IPAIR = -1
@@ -177,7 +192,7 @@
           BODY(I2) = M2/ZMBAR
           ZMB = BODY(I1) + BODY(I2)
           ZMU = BODY(I1)*BODY(I2)/ZMB
-          DM = ZMB0 - ZMB
+          DM = ZMB0 - ZMB   ! this should be zero for ISKIP > 0
           ZMASS = ZMASS - DM
 *
 *       Copy chain perturbers and obtain potential energy w.r.t. I1 & I2.
@@ -188,20 +203,20 @@
    15     CONTINUE
           CALL NBPOT(2,NP,POT1)
 *
-*       Distinguish between bound and hyperbolic orbit.
+*       Distinguish between elliptic and hyperbolic orbit.
           IF (ECC.LT.1.0) THEN
 *
 *       Set eccentricity factor for pericentre procedure.
               EFAC = SQRT((1.0 - ECC)/(1.0 + ECC))
 *
-      RB2 = 0.0
-      RB0 = 0.0
+              RB2 = 0.0
+              RB0 = 0.0
 *       Set new coordinates and velocities for relative & absolute motion.
               DO 20 K = 1,3
-      RB0 = RB0 + XREL(K)**2
+              RB0 = RB0 + XREL(K)**2
                   XREL(K) = XREL(K)*SEMI/RIJ0
                   XREL(K) = (1.0 + ECC)*XREL(K)
-      RB2 = RB2 + XREL(K)**2
+              RB2 = RB2 + XREL(K)**2
                   X(K,I1) =  XCM(K) + BODY(I2)*XREL(K)/ZMB
                   X(K,I2) =  XCM(K) - BODY(I1)*XREL(K)/ZMB
                   VREL(K) = SQRT(ZMB/(SEMI*VIJ2))*VREL(K)
@@ -210,14 +225,15 @@
                   XDOT(K,I2) = VCM(K) - BODY(I1)*VREL(K)/ZMB
    20         CONTINUE
 *
-      WRITE (6,21)  ECC, SQRT(RB0),SQRT(RB2), SEMI, SEMI*(1.0 - ECC)
-   21 FORMAT (' NEW ORB   E RB0 RB A PMIN  ',F8.4,1P,4E12.4)
+              WRITE (6,21)  ECC, SQRT(RB0),SQRT(RB2), SEMI,
+     &                      SEMI*(1.0 - ECC)
+   21         FORMAT (' EXPEL2!   E RB0 RB A PMIN  ',F8.4,1P,4E12.4)
           ELSE
 *       Form relative velocity by ratio of new and old pericentre value.
               V2 = ZMB*(2.0/RIJ0 - 1.0/SEMI)
               V20 = VREL(1)**2 + VREL(2)**2 + VREL(3)**2
-      WRITE (6,22)  V2, V20
-   22 FORMAT (' V2 V20   ',1P,2E12.4)
+              WRITE (6,22)  V2, V20
+   22         FORMAT (' V2 V20   ',1P,2E12.4)
               DO 30 K = 1,3
                   VREL(K) = SQRT(V2/V20)*VREL(K)
                   XDOT(K,I1) = VCM(K) + BODY(I2)*VREL(K)/ZMB
@@ -234,16 +250,17 @@
 *       Specify new energies (note BODY(I2) & ZMU = 0 for coalescence).
           HF = -0.5d0*ZMB/SEMI
 *
-*       Update energy corrections (change in H and mass loss kinetic energy). 
+*       Update energy corrections (change in H & mass loss kinetic energy). 
           ECOLL = ECOLL - ZMU*HF
           CHCOLL = CHCOLL - ZMU*HF
-          ECDOT = ECDOT + 0.5*DM*VCM2
 *
-      WRITE (6,24)  ZMU0*HI- ZMU*HF, 0.5*DM*VCM2, HI, HF, DM*SMU
-   24 FORMAT (' EXPEL2    DEB DKE HI HF DMSUN ',1P,4E12.4,E10.2)
+          WRITE (6,24)  ZMU0*HI- ZMU*HF, 0.5*DM*VCM2, HI, HF, DM*SMU
+   24     FORMAT (' EXPEL2    DEB DKE HI HF DMSUN ',1P,4E12.4,E10.2)
 *       Include potential energy terms due to all other members.
           POTJ = 0.d0
 *       Note no initialization of neighbours done in the chain case.
+          IF (ISKIP.GT.0) GO TO 55
+          ECDOT = ECDOT + 0.5*DM*VCM2
           DO 50 J = IFIRST,NTOT
               IF (J.NE.I1.AND.J.NE.I2) THEN
                   RIJ2 = (X(1,J) - XCM(1))**2 + 
@@ -262,18 +279,27 @@
 *       Add potential energy contributions to yield final correction.
           ECDOT = ECDOT + DM*POTJ
 *
-          WRITE (6,60)  (NAME(JLIST(K)),K=1,4), KSTAR(I1), KSTAR(I2),
+   55     WRITE (6,60)  (NAME(JLIST(K)),K=1,4), KSTAR(I1), KSTAR(I2),
      &                  KW1, KW2, M1, M2, DM*ZMBAR, ECC, R1, R2,
      &                  SEMI0*SU, SEMI*SU, POT2-POT1
-   60     FORMAT (' CHAIN CE    NAM K0* K* M1 M2 DM E R1 R2 A0 A DP ',
-     &                          4I6,4I3,3F5.1,F8.4,2F6.1,2F8.1,1P,E9.1)
+   60     FORMAT (' ARCHAIN CE    NAM K0* K* M1 M2 DM E R1 R2 A0 A DP ',
+     &                           4I6,4I3,3F5.1,F9.5,2F6.1,2F8.1,1P,E9.1)
 *
           KSTAR(I1) = KW1
           KSTAR(I2) = KW2
+          IF (ISKIP.GT.0) KW1 = 14
           IPHASE = 0
-*       Include possible NS or BH kick (not tested yet!).
-          IF (KW1.EQ.13.OR.KW1.EQ.14) THEN
+*       Include possible NS or BH kick (also ISKIP > 0).
+          IF ((KZ(25).GT.0.AND.KW1.GE.10.AND.KW1.LE.12).OR.
+     &       (KW1.EQ.13.OR.KW1.EQ.14)) THEN
               CALL KICK(I1,1,KW1,DM)
+              RS0 = RS(I1)
+              DO 65 K = 1,3
+                  X0DOT(K,I1) = XDOT(K,I1)
+   65         CONTINUE
+              CALL NBLIST(I1,RS0)
+              CALL FPOLY1(I1,I1,0)
+              CALL FPOLY2(I1,I1,0)
           END IF
       END IF
 *

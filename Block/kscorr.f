@@ -12,7 +12,7 @@
       DATA SLOW /1.0D0,2.0D0,4.0D0,8.0D0,16.0D0,32.0D0,64.0D0,128.0D0/
       REAL*8  UI(4),UIDOT(4),FP(6),FD(6),FREG(4),FRD(4),A1(3,4),A(8),
      &        U4(4),U5(4)
-*     REAL*8  XI(6),VI(6),RDOT(3)
+      REAL*8  XI(6),VI(6),RDOT(3)
 *
 *
 *       Convert from physical to regularized derivative using T' = R.
@@ -95,12 +95,17 @@
      &                       ONE12*(HDOT2(IPAIR) - HD2)*DTU)*DTU
 *       Check for extra perturbation calculation.
           IF (ITER.EQ.ITP) THEN
-              I1 = 2*IPAIR - 1
-              CALL KSTRAN(I1,UI,UIDOT,XI,VI)
-              NNB0 = LIST(1,I1)
+*       Note only basic KS transformation is needed here.
+              CALL KSTRAN2(UI,UIDOT,Q1,Q2,Q3,RDOT)
               I = N + IPAIR
               BODYIN = 1.0/BODY(I)
-              CALL KSPERT2(I1,I,NNB0,BODYIN,Q1,Q2,Q3,RDOT,XI,VI,FP,FD)
+              DO 27 K = 1,3
+                  RDOT(K) = VI(K) - VI(K+3)
+   27         CONTINUE
+              I1 = 2*IPAIR - 1
+              NNB0 = LIST(1,I1)
+*       Adopt KSINT procedure based on local variables for next iteration.
+              CALL KSPERT2(I1,I,NNB0,BODYIN,Q1,Q2,Q3,RDOT,FP,FD)
               DO 28 K = 1,3
                   FD(K) = RI*FD(K)
    28         CONTINUE

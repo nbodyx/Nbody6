@@ -5,10 +5,19 @@
 *       ------------------------
 *
       INCLUDE 'common6.h'
+      REAL*8  XREL(3)
 *
 *
-*       Set c.m. index and initialize scalars.
+*       See whether irregular time-step can replace full loop.
       I = N + IPAIR
+      SEMI = -0.5*BODY(I)/H(IPAIR)
+      TK = TWOPI*SEMI*SQRT(SEMI/BODY(I))
+      IF (STEP(I).GT.TK) THEN
+          DT = STEP(I)
+          GO TO 20
+      END IF
+*
+*       Initialize scalars.
       FMAX = 0.0
       DTIN = 1.0E+20
       JCLOSE = 0
@@ -23,14 +32,17 @@
 *       Find the most likely perturbers (first approach & maximum force).
       DO 10 L = 2,NNB1
           J = LIST(L,I)
-          RIJ2 = 0.0
+          DO 4 K = 1,3
+              XREL(K) = X(K,J) - X(K,I)
+    4     CONTINUE
+          RIJ2 = XREL(1)**2 + XREL(2)**2 + XREL(3)**2
+*       Skip distant neighbours outside 50*SEMI.
+          IF (RIJ2.GT.2.5D+05*SEMI**2) GO TO 10
           RDOT = 0.0
 *
           DO 6 K = 1,3
-              XREL = X(K,J) - X(K,I)
               VREL = XDOT(K,J) - XDOT(K,I)
-              RIJ2 = RIJ2 + XREL**2
-              RDOT = RDOT + XREL*VREL
+              RDOT = RDOT + XREL(K)*VREL
     6     CONTINUE
 *
           VR = RDOT/RIJ2
@@ -48,11 +60,16 @@
           END IF
    10 CONTINUE
 *
+*       Specify safe interval if no candidates selected.
+      IF (JCLOSE.EQ.0) THEN
+          DT = 2.0*STEP(I)
+          GO TO 20
+      END IF
+*
 *       Form radial velocity of body with shortest approach time (if any).
       RCRIT = SQRT(RCRIT2)
       RDOT = RCRIT*ABS(DTIN)
       A1 = 2.0/(BODY(I)*GA)
-      SEMI = -0.5*BODY(I)/H(IPAIR)
 *
 *       Use the actual apocentre for unperturbed travel time.
       ECC2 = (1.0 - R(IPAIR)/SEMI)**2 + TDOT2(IPAIR)**2/(BODY(I)*SEMI)
@@ -74,7 +91,7 @@
       END IF
 *
 *       Apply safety test in case background force dominates c.m. motion.
-      DT = MIN(DT,4.0D0*STEP(I))
+      DT = MIN(DT,2.0D0*STEP(I))
       DT = MAX(DT,0.0D0)
 *
    20 RETURN

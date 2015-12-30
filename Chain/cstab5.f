@@ -203,8 +203,8 @@
 *       Obtain the inclination.
       CALL INCLIN(XX,VV,XB,VB,ALPHA)
 *
-*       Employ the general stability criterion.
-      PCRIT = stability(M1,M2,M3,ECC0,ECC1,ALPHA)*SEMI
+*       Employ the three-body stability criterion.
+      PCRIT = QSTAB(ECC0,ECC1,ALPHA,M1,M2,M3)*SEMI
 *
 *       Modify correction factor by widest binary (cf. routine IMPACT).
       IF (SEMI2.GT.0.0) PCRIT = (1.0 + 0.1*SEMI2/SEMI)*PCRIT

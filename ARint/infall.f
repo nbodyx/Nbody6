@@ -40,8 +40,6 @@
           ZK1 = ZK1 + XDOT(K,ICH)**2
     5 CONTINUE
       ZK1 = 0.5*BODY(ICH)*ZK1
-*       Add c.m. kinetic energy change for conservation.
-      ECOLL = ECOLL + ZK1
 *
 *       Define new local c.m. for two-body system IBH & IESC.
       LX = IBH
@@ -171,12 +169,13 @@
                   ICH = J
               END IF
    60     CONTINUE
-*       Save new NAME(ICH) and copy BODYC(IBH) & c.m. coordinates to ICH.
+*       Save new NAME(ICH) and copy BODYC(IBH) & c.m. variables to ICH.
           NAME0 = NAME(ICH)
           NAME(ICH) = 0
           BODY(ICH) = BODYC(IBH)
           DO 62 K = 1,3
               X(K,ICH) = X(K,ICH0)
+              XDOT(K,ICH) = XDOT(K,ICH0)
    62     CONTINUE
       END IF
 *
@@ -255,6 +254,25 @@
           WRITE (6,99)  TIME+TOFF, (CG(K),K=1,6)
    99     FORMAT (' INFALL CHECK:   T CG ',F10.2,1P,6E9.1)
       END IF
+*
+*       Form new c.m. kinetic energy.
+      ZK2 = 0.0
+      DO 120 K = 1,3
+          ZK2 = ZK2 + XDOT(K,ICH)**2
+  120 CONTINUE
+*       Note XDOT(ICH) = 0.0 at 10/7 test which has small energy error.
+      ZK2 = 0.5*BODY(ICH)*ZK2
+*
+*       Add c.m. kinetic energy change for conservation.
+      ECOLL = ECOLL + (ZK1 - ZK2)
+*
+*       Re-initialize force polynomials.
+      TIME = TBLOCK
+      DO 125 K = 1,3
+          X0DOT(K,ICH) = XDOT(K,ICH)   ! Note zero velocity bug.
+  125 CONTINUE
+      CALL FPOLY1(ICH,ICH,0)
+      CALL FPOLY2(ICH,ICH,0)
 *
       RETURN
 *

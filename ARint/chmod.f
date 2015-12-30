@@ -123,6 +123,8 @@
           END IF
       END IF
       IF (NN.GE.9) GO TO 10
+*       Prevent absorbed particle escaping from CHAIN/REDUCE
+      IF (RIJ.GT.2.0*RMIN) GO TO 10
 *
 *       Form the scalar product R*V for sign of radial velocity.
       RDOT = (X(1,JCLOSE) - X(1,ICH))*(XDOT(1,JCLOSE) - XDOT(1,ICH)) +
@@ -284,10 +286,10 @@
           END IF
 *
 *       Absorb the perturber (single particle or binary).
-          CALL ABSORB(ISUB)
+          IF (KZ(30).GT.2) CALL ABSORB(ISUB)
 *
-*       Reduce block-time since new c.m. step may be very small.
-          TBLOCK = MIN(TIME,TBLOCK)
+*       Reduce time since new c.m. step may be very small.
+          TIME = MIN(TIME,TBLOCK)
 *
 *       Activate indicator for new chain treatment.
           KCASE = 1
@@ -346,11 +348,11 @@
               WRITE (6,155)  NAME(JCLOSE), R(JCLOSE-N), GAMMA(JCLOSE-N)
           END IF
 *
-*       Absorb the perturber (single particle or binary).
-          CALL ABSORB(ISUB)
+*       Absorb the perturber (single particle or binary but note INJECT).
+          IF (KZ(30).GT.2) CALL ABSORB(ISUB)
 *
-*       Reduce block-time since new c.m. step may be very small.
-          TBLOCK = MIN(TIME,TBLOCK)
+*       Reduce time since new c.m. step may be very small.
+          TIME = MIN(TIME,TBLOCK)
 *
 *       Activate indicator for new chain treatment and try a second search.
           KCASE = 1

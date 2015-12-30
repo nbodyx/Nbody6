@@ -18,7 +18,7 @@
       SEMI = -0.5*BODY(I)/H(IPAIR)
       ECC2 = (1.0 - R(IPAIR)/SEMI)**2 + TDOT2(IPAIR)**2/(SEMI*BODY(I))
       ECC = SQRT(ECC2)
-      IF (ECC.LE.0.01) GO TO 50
+      IF (ECC.LE.0.05) GO TO 50   ! many WARNINGs seen for ECC = 0.0105.
       IF (GAMMA(IPAIR).GT.0.1) GO TO 50
 *
 *       Include Roche rectification for large ECC (additional to roche.f).
@@ -36,7 +36,7 @@
       ERR = (HI - H(IPAIR))/HI
       ZMU = BODY(2*IPAIR)*BODY(2*IPAIR-1)/BODY(N+IPAIR)
       DB = ZMU*(HI - H(IPAIR))
-      IF (ABS(DB).GT.1.0D-08) THEN
+      IF (ABS(DB).GT.1.0D-07) THEN
           SEMI = -0.5*BODY(N+IPAIR)/H(IPAIR)
           RA = R(IPAIR)/SEMI
           IF (SEMI.LT.0.0) RA = R(IPAIR)

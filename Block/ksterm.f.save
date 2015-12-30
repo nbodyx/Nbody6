@@ -48,18 +48,22 @@
           IF (DT0.GT.STEP(I1)) THEN
               TIME = T0(I1) + STEP(I1)
               H0(IPAIR) = H(IPAIR)
-              Z = -0.5D0*H(IPAIR)*DTAU(IPAIR)**2
-              CALL STUMPF(IPAIR,Z)
-              CALL KSINT(I1)
+*             Z = -0.5D0*H(IPAIR)*DTAU(IPAIR)**2
+*             CALL STUMPF(IPAIR,Z)
+              CALL KSINT(I1,1)   ! Dummy argument; hopefully nothing happens.
               DTU = DTAU(IPAIR)
               STEP(I1) = ((ONE6*TDOT3(IPAIR)*DTU + 0.5*TDOT2(IPAIR))*DTU
      &                                                   + R(IPAIR))*DTU
               STEP(I1) = ZMOD*STEP(I1)
+              DT = STEP(I1)
+              CALL STEPK(DT,DTN)
+              STEP(I1) = DTN
 *       Restrict increase of R for superfast particles in one block-step.
               IF (H(IPAIR).GT.100.0.AND.R(IPAIR).GT.RMIN) GO TO 3
               GO TO 1
           END IF
 *
+          IF (NPAIRS.GT.0) GO TO 3
 *       Determine the last regularized step by Newton-Raphson iteration.
           DTU = DT0/(R(IPAIR)*ZMOD)
           DTU = MIN(DTU,DTAU(IPAIR))
@@ -82,13 +86,16 @@
           STEP(I1) = DT1
           TIME = T0(I1) + DT1
           H0(IPAIR) = H(IPAIR)
-          Z = -0.5D0*H(IPAIR)*DTU**2
-          CALL STUMPF(IPAIR,Z)
-          CALL KSINT(I1)
+*         Z = -0.5D0*H(IPAIR)*DTU**2
+*         CALL STUMPF(IPAIR,Z)
+          CALL KSINT(I1,1)
+          DT = STEP(I1)
+          CALL STEPK(DT,DTN)
+          STEP(I1) = DTN
     3     TIME = TIME0
 *
 *       Predict X & XDOT for body #JCOMP (note TIME = TBLOCK if second call).
-          IF (N.LT.5000) THEN
+          IF (N.LT.5000.OR.IPHASE.NE.2) THEN
               IF (JCOMP.GE.IFIRST) THEN   ! procedure suppressed for fast code.
                   CALL XVPRED(JCOMP,-1)
                   IF (GAMMA(IPAIR).GT.0.2.AND.JCOMP.LE.N) THEN
@@ -354,6 +361,7 @@
       LIST(1,ICOMP) = NNB1
       LIST(1,JCOMP) = NNB1
 *
+      TIME = TBLOCK
 *       Initialize T0, T0R, X0 & X0DOT for both components.
       T0(ICOMP) = TIME
       T0(JCOMP) = TIME
@@ -366,23 +374,25 @@
           X0DOT(K,JCOMP) = XDOT(K,JCOMP)
    95 CONTINUE
 *
-*       Predict current coordinates & velocities for the neighbours.
-      CALL XVPRED(ICOMP,NNB1)
-*
 *       Form new force polynomials (skip triple, quad, merge & chain).
-      IF (N.LT.5000) THEN
+      IF (IPHASE.LT.4) THEN
+*       Predict current coordinates & velocities for the neighbours.
+          CALL XVPRED(ICOMP,NNB1)
+*
+*       Obtain new polynomials & steps (directly or using FREG from c.m.).
+          IF (N.LT.5000.OR.IPHASE.NE.2) THEN
 *       Use old method for non-standard termination (not from nbody6.f).
 *
-          CALL FPOLY1(ICOMP,JCOMP,2)
-          CALL FPOLY2(ICOMP,JCOMP,2)
+              CALL FPOLY1(ICOMP,JCOMP,2)
+              CALL FPOLY2(ICOMP,JCOMP,2)
 *
 *       Improve force polynomials of strong perturber after rectification.
-          IF (JMIN.GE.IFIRST) THEN
-              CALL FPOLY1(JMIN,JMIN,0)
-              CALL FPOLY2(JMIN,JMIN,0)
-          END IF
+              IF (JMIN.GE.IFIRST) THEN
+                  CALL FPOLY1(JMIN,JMIN,0)
+                  CALL FPOLY2(JMIN,JMIN,0)
+              END IF
 *
-      ELSE
+          ELSE
 *
 *       Treat each component in turn.
           I = ICOMP
@@ -453,7 +463,8 @@
 *
 *       Initialize next irregular time and copy c.m. regular time-step.
           TNEW(I) = TIME + STEP(I)
-          STEPR(I) = CMSTEP
+          CALL STEPK(CMSTEP,DTN)
+          STEPR(I) = DTN
           ITER = 0
 *       Perform commensurability check.
   145     IF (DMOD(TIME,STEPR(I)).NE.0.0D0) THEN
@@ -484,6 +495,7 @@
           IF (I.EQ.ICOMP) THEN
               I = JCOMP
               GO TO 100
+          END IF
           END IF
 *
 *       Improve force polynomials of strong perturber after rectification.

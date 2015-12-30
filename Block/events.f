@@ -5,7 +5,12 @@
 *       --------------------------------------------
 *
       INCLUDE 'common6.h'
-      INTEGER  NTYPE(17)
+      PARAMETER  (NMX=10,NMX4=4*NMX)
+      COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
+     &                LISTC(LMAX)
+      COMMON/CCOLL2/  QK(NMX4),PK(NMX4),RIK(NMX,NMX),SIZE(NMX),VSTAR1,
+     &                ECOLL1,RCOLL,QPERI,ISTAR(NMX),ICOLL,ISYNC,NDISS1
+      INTEGER  NTYPE(17),IHIST(10)
       real*8 thookf,tbgbf
       external thookf,tbgbf
 *
@@ -81,6 +86,45 @@
      &                  EMESC, DEGRAV, E(3), ZMX*SMU, TURN, NS, NB
    35     FORMAT (' #5',I8,I6,3I7,I5,I7,I8,2I5,I6,I7,3F8.3,4F7.3,F8.3,
      &                  F7.3,2F8.3,F6.1,F6.2,2I4)
+      END IF
+*
+*       Include plotting file on unit #4 for NS & BHs; also BH mass function.
+      IF (KZ(4).GT.0.AND.NS + NB.GT.0) THEN
+          WRITE (4,40)  (TIME+TOFF)*TSTAR, N, NS, NB
+   40     FORMAT (' T N NS NB ',F7.1,I7,I5,I4)
+          CALL FLUSH(4)
+          IF (KZ(4).GT.1.AND.NB.GT.0) THEN
+              DO 45 J = 1,10
+                  IHIST(J) = 0
+   45         CONTINUE
+              KX = 0
+              DO 50 J = 1,N
+                  IF (KSTAR(J).NE.14.OR.BODY(J).EQ.0.0D0) GO TO 50
+                  IF (NCH.GT.0.AND.J.EQ.ICH) GO TO 50
+                  ZM = BODY(J)*SMU
+                  KK = ZM/4.0 + 1
+                  KK = MIN(KK,10)
+                  KX = MAX(KK,KX)
+                  IHIST(KK) = IHIST(KK) + 1
+   50         CONTINUE
+*
+*       Include any members of chain regularization.
+              IF (NCH.GT.0) THEN
+                  DO 60 J = 1,NCH
+                      IF (ISTAR(J).EQ.14) THEN
+                          ZM = BODYC(J)*SMU
+                          KK = ZM/4.0 + 1
+                          KK = MIN(KK,10)
+                          KX = MAX(KK,KX)
+                          IHIST(KK) = IHIST(KK) + 1
+                      END IF
+   60             CONTINUE
+              END IF
+*       Print histogram of BH masses (factor of 2 from 4.0 Msun).
+              WRITE (93,70)  (TIME+TOFF)*TSTAR, (IHIST(K),K=1,KX)
+   70         FORMAT (' T6 IHIST ',F7.1,10I4)
+              CALL FLUSH(93)
+          END IF
       END IF
 *
       RETURN

@@ -164,11 +164,12 @@
 *
 *       Initialize termination indicator and check for large perturbation.
       IQ = .FALSE.
-      IF (GI.GT.0.1) GO TO 2
-      IF (GI.LT.0.03) THEN
+*       Skip for weaker perturbation or hierarchical systems.
+      IF (GI.LT.0.03.OR.NAME(I).LT.0) THEN
           JCOMP = 0
           GO TO 20
       END IF
+      IF (GI.GT.0.05) GO TO 2
       CALL FLYBY(I,ITERM)
       IF (ITERM.EQ.0.AND.KSTAR(I).LT.0) THEN
           IQ = .TRUE.
@@ -204,14 +205,14 @@
    10 CONTINUE
 *
 *       Try chain regularization if strong perturber forms dominant pair.
-      IF (JCOMP.GT.0.OR.GI.GT.0.1) THEN
+      IF (JCOMP.GT.0.OR.GI.GT.0.05) THEN
 *       Check optional binary search.
 *         IF (KZ(4).GT.0) THEN
 *             DGAM = GI - G0
 *             K = KZ(4)
 *             CALL EVOLVE(IPAIR,K)
 *         END IF
-          IF (JCOMP.LE.N.OR.GI.GT.0.1) IQ = .TRUE.
+          IF (JCOMP.LE.N.OR.GI.GT.0.05) IQ = .TRUE.
 *       Avoid termination inside SEMI (loss of energy accuracy in KSINIT).
           SEMI = -0.5*BODY(I)/HI
           IF (IQ.AND.GI.GT.0.05) THEN
@@ -346,7 +347,7 @@
                   IF (GI*(RAP/RI)**2.LT.0.1) IQ = .FALSE.
               END IF
               IF (GI.GT.0.1.AND.RI.GT.RMIN) IQ = .TRUE.
-              IF (GI.GT.0.002.AND.RI.GT.5.0*RMIN) IQ = .TRUE.
+              IF (GI.GT.0.02.AND.RI.GT.5.0*RMIN) IQ = .TRUE.
               IF (GI.GT.0.25) IQ = .TRUE.
 *       Include extra condition for planet case.
               IF (MIN(BODY(I1),BODY(I2)).LT.0.05*BODYM) THEN
@@ -366,7 +367,7 @@
 *    &                           I4,F10.4,F7.3,1P,E10.2,2E9.1)
 *       See whether chain test is needed (note SEMI not avaiable).
           IF (DTR.LT.STEP(I1)) THEN
-              IF (GI.GT.0.03) THEN
+              IF (GI.GT.0.05) THEN
                   SEMI = -0.5*BODY(I)/HI
                   GO TO 84
               END IF
@@ -732,7 +733,7 @@
           CALL KSRECT(IPAIR)
       END IF
 *
-*       See whether a subsystem can be selected for chain reg.
+*       See whether a compact subsystem can be selected for chain reg.
 *     IF (KZ(11).NE.0.AND.NCH.EQ.0.AND.BODY(I).GT.5.0*BODYM.AND.
    84 IF (NCH.EQ.0.AND.SEMI.LT.5.0*RMIN.AND.NAME(I).GT.0.AND.
      &    GI.GT.0.05) THEN
@@ -755,7 +756,7 @@
               RD = (X(1,I)-X(1,J))*(XDOT(1,I)-XDOT(1,J)) +
      &             (X(2,I)-X(2,J))*(XDOT(2,I)-XDOT(2,J)) +
      &             (X(3,I)-X(3,J))*(XDOT(3,I)-XDOT(3,J))
-              IF (RIJ2.LT.RCR2.AND.RD.LT.0.0) THEN
+              IF ((RIJ2.LT.RCR2.AND.RD.LT.0.0).OR.JCLOSE.EQ.0) THEN
                   IF (RIJ2.LT.RX2) THEN
                       RX2 = RIJ2
                       RRD = RD
@@ -766,16 +767,17 @@
                   END IF
               END IF
    85     CONTINUE
+*
           IF (JCLOSE.GT.0) THEN
-              IF (NAME(JCLOSE).LE.0.OR.NCH.GT.0) GO TO 88
-*       Skip chain selection if close perturber > 5*SEMI or impact > 2*SEMI.
+              IF (NAME(JCLOSE).LE.0) GO TO 88
+*       Skip chain selection if close perturber > 5*SEMI or impact > 5*SEMI.
               RX = SQRT(RX2)
               SEMI1 = 2.0/RX - VIJ2/(BODY(I) + BODY(JCLOSE))
               SEMI1 = 1.0/SEMI1
               ECC2 = (1.0-RX/SEMI1)**2 + RRD**2/(BODY(I)+BODY(JCLOSE))
               ECC1 = SQRT(ECC2)
               PMIN = SEMI1*(1.0 - ECC1)
-              IF (RX.GT.5.0*PMIN.OR.PMIN.GT.3.0*SEMI) GO TO 88
+              IF (RX.GT.5.0*PMIN.OR.PMIN.GT.5.0*SEMI) GO TO 88
 *       Delay until end of the block-step.
               IF (TBLOCK-TIME.GT.STEP(I1)) GO TO 100
 *             =============================================================
@@ -794,15 +796,14 @@
               IF (JCLOSE.GT.N) THEN
                   JP = JCLOSE - N
                   AJ = -0.5*BODY(JCLOSE)/H(JP) ! Needs proper stability test.
+                  IF (RX.GT.4.0*RMIN) GO TO 88
                   WRITE (6,86)  SEMI, AJ, PMIN, RX
    86             FORMAT (' KSINT CHAIN B-B    A AJ PM RX ',1P,4E10.2)
               END IF
 *
-              WRITE (6,87)  TTOT, NAME(JCLOSE), LIST(1,I1), SEMI, RGRAV,
-     &                      RX, GI
-   87         FORMAT (' NEW CHAIN    T NMJ NP A RGRAV RX GI ',
-     &                               F9.3,I6,I4,1P,4E10.2)
-      CALL FLUSH(6)
+              WRITE (6,87)  TTOT, NAME(JCLOSE), LIST(1,I1), SEMI, RX, GI
+   87         FORMAT (' NEW CHAIN    T NMJ NP A RX GI ',
+     &                               F9.3,I6,I4,1P,3E10.2)
 *       Initiate chain regularization directly (B-B or B-S: see IMPACT).
               JCOMP = JCLOSE
               JCMAX = 0

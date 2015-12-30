@@ -41,6 +41,16 @@
 *       Define chain membership.
       CALL SETSYS
 *
+      DO 15 L = 1,NCH
+          J = JLIST(L)
+          IF (J.LE.0) THEN
+          WRITE (6,1)  NCH, L, J
+    1     FORMAT (' BAD INITIAL MEMBER!    NCH L J ',3I4)
+          STOP
+          END IF
+   15 CONTINUE
+*     CALL FLUSH(6)
+*
 *       Initialize c.m. variables.
       DO 2 K = 1,7
           CM(K) = 0.0D0
@@ -114,23 +124,22 @@
 *
 *       Define gravitational radius for initial perturber list.
       RGRAV = SUM/ABS(ENERGY)
+      SEMIGR = 0.5*RGRAV
 *
 *       Avoid small value after collision (CHTERM improves perturbers).
       IF (NCH.GT.2) THEN
           RGRAV = MIN(RGRAV,0.5*RSUM)
       END IF
-      SEMIGR = 0.5*RGRAV
 *
 *       Set global index of c.m. body and save name (SUBSYS sets NAME = 0).
       IF (TIMEC.GT.0.0D0) ICH0 = ICH
-*     ICH = JLIST(LX)
       ICH = JLIST(1)
       NAME0 = NAME(ICH)
 *
 *       Define subsystem indicator (ISYS = 1,2,3,4 for triple, quad, chain).
       ISYS(NSUB+1) = 4
 *
-*       Form ghosts and initialize c.m. motion in ICOMP = JLIST(1).
+*       Form ghosts and initialize c.m. motion in ICOMP = JLIST(NCH).
       CALL SUBSYS(NCH,CM)
 *
 *       Copy neighbour list for ghost removal.
@@ -142,16 +151,16 @@
 *       Remove any ghosts from neighbour list.
       CALL NBREM(ICH,NCH,NNB)
 *
-*       Initialize perturber list and XC & UC for integration of chain c.m.
+*       Initialize perturber list and XC for integration of chain c.m.
       CALL CHLIST(ICH)
-      CALL XCPRED(0)    ! original bug fig 05/15.
+      CALL XCPRED(0)   ! original bug 05/15. 
 *
 *       Perform differential F & FDOT corrections due to perturbers.
       DO 25 K = 1,3
           FIRR(K) = 0.0D0
           FD(K) = 0.0
    25 CONTINUE
-      CALL CHFIRR(ICH,0,X(1,ICH),XDOT(1,ICH),FIRR,FD)
+      CALL CHFIRR(ICH,2,X(1,ICH),XDOT(1,ICH),FIRR,FD)
       DO 30 K = 1,3
           F(K,ICH) = F(K,ICH) + 0.5*FIRR(K)
           FDOT(K,ICH) = FDOT(K,ICH) + ONE6*FD(K)

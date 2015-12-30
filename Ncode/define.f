@@ -187,7 +187,8 @@
 *             =1/2: standard and tail; =3: tail only; >3: cluster + tail).
 *       4  Binary diagnostics on unit 4 (# threshold levels = KZ(4) < 10);
 *                                       (suppressed in input.f & ksint.f);
-*                                 new usage: number of NS & BH on unit #4.
+*                                 new usage: number of NS & BH on unit #4;
+*                                        >1: BH mass histogram.
 *       5  Initial conditions (#22 =0; =0: uniform & isotropic sphere);
 *                =1: Plummer; =2: two Plummer models in orbit, extra input;
 *                =3: massive perturber and planetesimal disk, extra input;
@@ -286,7 +287,7 @@
 *                          <0: strong three-body events (impact.f, unit #49).
 *      46  Reserved for data analysis project on NBODY6++.
 *      47  Reserved for data analysis project on NBODY6++.
-*      48  Not used.
+*      48  Comparison of stability criteria.
 *      49  Post-Newtonian perturbations included in KS (dir Block).
 *      50  Not used.
 *       ---------------------------------------------------------------------

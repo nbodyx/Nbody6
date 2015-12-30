@@ -112,10 +112,10 @@
 
 This is a User Manual for {\ZZ{NBODY6}}, a code that has been extensively
 tested since it was first developed around 1992.
-This code is mainly intended for laptops and workstations with the {\tt UNIX}
-operating system.
-A parallel implementation called {\ZZ{NBODY6\plusplus}} for Beowulf PC
-clusters and the T3E supercomputer is also available [Spurzem 1999].
+This code is mainly intended for laptops and workstations with {\tt UNIX}
+operating system and GPUs.
+A parallel implementation called {\ZZ{NBODY6\plusplus}} for PC
+clusters and supercomputers is also available [Wang \etal 2015].
 
 The code relies on many features of the classical {\ZZ{NBODY5}} which dates
 back to the late 1970s.
@@ -123,19 +123,19 @@ The subsequent change from a divided difference formulation to Hermite
 integration [Makino 1991] led to a complete revision.
 Briefly stated, single particles and centre-of-mass systems are integrated
 by the Ahmad--Cohen [1973] neighbour scheme using the fourth-order Hermite
-method [Makino \& Aarseth 1992] (for the quantized version see Aarseth 1999).
+method [Makino \& Aarseth 1992] (for the parallel version see Aarseth 1999).
 Binaries and close two-body encounters are studied by the Stumpff version of
 Kustaanheimo--Stiefel [1964, KS] regularization [Mikkola \& Aarseth 1998],
-while interactions of compact subsystems are described by the chain
+while interactions of compact subsystems are calculated by the chain
 regularization method [Mikkola \& Aarseth 1990, 1993, 1996].
 Moreover, strong interactions in unperturbed triples and quadruples are
 treated by three-body [Aarseth \& Zare 1974, AZ] and Heggie [1974] global
 regularization [Mikkola 1985].
 Finally, hard triples and higher-order systems satisfying a stability
-criterion [Mardling \& Aarseth 1999, Mardling 2008] are reduced to two-body
-configurations (so-called mergers as opposed to collisions).
+criterion [Mardling \& Aarseth 1999, Mardling 2008, Valtonen 2014] are reduced
+to two-body configurations (so-called `mergers' as opposed to collisions).
 All the relevant equations of motion are derived and discussed extensively in
-a recent book [Aarseth 2003], together with algorithms which may be helpful
+a book [Aarseth 2003], together with algorithms which may be helpful
 when examining the {\ZZ{FORTRAN}} procedures.
 Hence familiarity with the book is beneficial for understanding the code.
 
@@ -148,21 +148,21 @@ imposed wind and supernova mass loss.
 Binary evolution and collisions were subsequently included [Tout \etal 1997].
 Finally, an extension to lower metallicities was implemented
 [Hurley, Pols \& Tout 2000].
-Note that the private {\ZZ{GRAPE-6}} code {\ZZ{NBODY4}}
-contains several important astrophysical processes which are now also included
-in the November 2007 release ({\it e.g.} Roche lobe overflow and spin--orbit
+Note that the private {\ZZ{GRAPE6}} code {\ZZ{NBODY4}}
+contains several important astrophysical processes which were included
+in the November 2007 release ({\it e.g.} Roche-lobe overflow and spin--orbit
 coupling).
 Moreover, {\ZZ{NBODY6}} contains new procedures for a general 3D galactic
 potential.
 The code itself can be downloaded from the web in the form of a compressed
-tar file.\footnote{\tt http://www.ast.cam.ac.uk/research.nbody.}
+tar file.\footnote{\tt ftp.ast.cam.ac.uk/pub/sverre.}
 
 \section{Code structure}
 
 The whole code consists of some 55,000 lines including comments and layout
 space.
 It is written in {\ZZ{FORTRAN}} and is f77 compliant but also compiles
-with g77, Intel or F95 (ignore warning messages of non-standard expressions).
+with g77, Intel or f95 (ignore warning messages of non-standard expressions).
 There are about 330 routines altogether, mostly with mnemonic names of
 maximum six characters.
 Likewise, almost all the {\ZZ{FORTRAN}} statements are in upper case while
@@ -188,32 +188,32 @@ appropriate algorithm.
 However, the decision-making requires very little overheads.
 A number of optional procedures are included but care is needed to avoid
 mutual inconsistencies since only some parameter values and no options are
-checked.
-The main choice is between isolated point-mass calculations and
-realistic star cluster models which include relevant astrophysical processes.
+checked (routine {\tt verify.f}).
+%The main choice is between isolated point-mass calculations and
+%realistic star cluster models which include relevant astrophysical processes.
 
 \section{Getting started}
 
 Once the file {\tt nbody6.tar.gz} is downloaded and uncompressed, the routines
-are extracted by `{\tt tar xvf nbody6.tar}' and copied to four directories
-for convenience: {\tt Ncode, Chain, Nchain, Docs}.
+are extracted by `{\tt tar xvf nbody6.tar}' and copied to eight directories:
+{\tt Ncode, Chain, Nchain, Docs, Block, ARchain, ARint, GPU2}.
 The first contains the main code, while {\tt Chain} holds the basic chain
 procedures and {\tt Nchain} provides the corresponding $N$-body interface.
 A number of useful files, such as test input templates, listing in {\ZZ {TeX}}
 of all routines and the structure of the old code {\ZZ {NBODY5}} are included
 in the directory {\tt Docs}.
 
-The size of most large {\tt common} arrays are given by the parameter file
+The size of most large {\tt common} arrays is given by the parameter file
 {\tt params.h} and defined in Table~\ref{params}.
 Depending on available memory, it is recommended to limit the maximum array
 sizes somewhat but still leave room for bigger calculations; this will
 facilitate examining {\tt common} blocks using the same {\tt read}
 statements for different memberships.
 Note that the files {\tt params.h} and {\tt common6.h} are also used in the
-interface directory {\tt Nchain} by a soft link definition.
-Once these parameters have been specified, the correct size of the
-{\tt common} block is calculated automatically in routine {\tt mydump.f}.
-The present modest choice of parameters ($N_{\rm max} = 4010$) produces a
+interface directories {\tt Nchain, ARint, Block, GPU2} by a soft link definition.
+Once these parameters have been specified (dir {\tt Ncode}), the correct size of
+the {\tt common} block is calculated automatically in routine {\tt mydump.f}.
+The original modest choice of parameters ($N_{\rm max} = 4010$) produces a
 {\tt common} block of about 4~Mb.
 
 Before compiling, check the {\ZZ {FORTRAN}} directives in the {\tt Makefile},
@@ -224,7 +224,7 @@ One possible reason for failure could be the {\tt CPU} timer function
 Any other complaints and strange run-time behaviour should be reported after
 making every effort to ascertain the problem.
 For frequent usage it is recommended to create separate working directories.
-It is also a good idea to save the original files when making changes.
+It is also a good idea to save the new source files before making changes.
 
 To start a test run, place the executable and a template input file
 {\tt input} in one directory and type the command
@@ -277,16 +277,16 @@ routine {\tt define.f} contains a complete listing.
 Many are dimensionless while others have an astrophysical meaning
 (see Aarseth 2001a for the neighbour scheme in {\ZZ {NBODY2}}).
 Likewise, the options {\tt KZ(J)} can be selected by consulting
-Table~\ref{options}.
+Table~\ref{options} or routine {\tt define.f}.
 Hence only a few values need to be changed in the input template once a
-calculation has been performed.
+calculation has finished.
 Input files for primordial binaries ({\tt inbins}) and 3D tidal field
 ({\tt inlog}) are included in the directory {\tt Docs}.
 Uploaded binaries with option 22 can be regularized initially by
 specifying {\ZZ {NBIN0}}.
 
-For most purposes, and a wide range of particle numbers, the standard choice
-of the accuracy parameters $\etaI, \etaR$ and $\etaU$ should suffice.
+For most purposes, and a wide range of particle numbers, the original choice
+of the accuracy parameters $\etaI, \etaR$ and $\etaU$ may suffice.
 Having decided on the membership $N$, a maximum neighbour number of
 $n_{\rm max} \simeq 2 N^{1/2}$ is usually adequate in the absence of
 primordial binaries.
@@ -295,8 +295,6 @@ $\Delta t_{\rm adj} = 2.0$ for energy checks and escaper removal and take
 $\Delta t_{\rm out} = 10.0$ for main output and data analysis.
 The choice of the relative energy tolerance $Q_{\rm E}$ is a matter of
 taste.
-%of taste and a slightly larger value than quoted in Table~\ref{variables}
-%may be acceptable.
 
 \section{Initial conditions}
 
@@ -310,11 +308,12 @@ conditions for new investigations
 ($m_i, {\bf r}_i, {\bf v}_i, ~i = 1, 2, .., N$).
 One possibility is to use the stand-alone code {\tt aking6.f} and input
 {\tt inking} for generating King models [Heggie \& Ramamani 1995]
-(no warranty!) included in the directory {\tt Docs}.
-A package for producing initially rotating cluster models is also available
+included in the directory {\tt Docs}.
+Also see {\tt mcluster.c}.
+A package for producing initially rotating models is also available
 [Spurzem \& Einsel 2002, private communication].
 
-The specially generated initial distribution is read from {\tt fort.10} with
+The specially generated initial condition is read from {\tt fort.10} with
 option \#~22~=~2 before scaling to standard internal units of total energy
 $-0.25$ (for bound clusters) and $\sum m_i = 1$.
 Primordial binaries and single stars can be uploaded using \#~22~=~4 instead.
@@ -375,11 +374,11 @@ is truncated (or quantized) to the nearest factor 2 value commensurate with
 This requirement implies that {\tt mod(TIME,$\Delta t_i)=0$} for
 both the old and new time-step at the updating of a Hermite solution.
 A more sensitive expression is obtained by including the other force
-derivatives.
+derivatives (see book Eq.~2.13).
 Given a list of particles that are due for treatment in some larger
 interval, the actual block-step members are determined by identifying
-those with $T_0 + \Delta t_j = t_{\rm new}$, where $T_0$ is the time
-of the last neighbour (so-called irregular) force evaluation.
+those with $T_0 + \Delta t_j = t_{\rm min}$, where $t_{\rm min}$ is the
+smallest value of $t_{\rm new} = T_0 + \Delta t_j$ in the previous block.
 
 The basic integration cycle is given by the following lines of code:
 
@@ -420,7 +419,7 @@ This may necessitate an occasional return to the main routine for the
 specified task, defined by the flow control indicator
 (\cf Table~\ref{control}).
 The last step of the main cycle deals with the optional stellar evolution,
-examined at small quantized intervals of $\le 10^2$~yr.
+examined at small quantized intervals $\le 10^2$~yr.
 
 \section{Data management} \label{data}
 
@@ -451,6 +450,7 @@ The neighbour strategy in {\ZZ {NBODY2}} is similar [Aarseth 2001a].
 In the case of force summations involving neighbours with $j > N$, the \cm is
 replaced by the components (which must be obtained by a KS transformation) if
 the \cm approximation is not satisfied.
+Typically $d < 100 a (1 + e)$ for equal masses.
 
 In order to introduce more complex systems, such as stable triples or
 temporary chain subsystems, the device of `ghost' particles of zero mass is
@@ -464,6 +464,8 @@ is non-trivial (see Appendix~C of book).
 Two types of output are produced.
 Important results are presented in file names using capitals, while
 supplementary diagnostics appear in {\tt fort.n} with $n > 2$.
+Also note the text file {\tt fort.x} available on the website and in dir
+{\tt Docs}.
 The main files provide the following information in mathematical notation:
 
 \begin{itemize}
@@ -483,7 +485,7 @@ Here ${\cal N}_i$ represent original particle names, $E_{\rm cm}$ is the
 specific \cm binding energy, $P$ denotes the period (days), $k^{\ast}$ is the
 stellar type, $a_1 (1 - e_1)$ is the outer pericentre and $R_{\rm pcrit}$
 the corresponding stability boundary.
-The maximum eccentricity in the Kozai cycle is given by $e_{\rm max}$, while
+The maximum eccentricity in a Kozai cycle is given by $e_{\rm max}$, while
 $e_0$ and $e_1$ refer to the respective eccentricities.
 Note that the file {\tt HIARCH} contains information on the formation and
 termination of hierarchical systems whereas {\tt HIDAT} provides a summary
@@ -500,6 +502,8 @@ A variety of results also appear as standard output.
 This takes the form of an error check at intervals ${\Delta t}_{\rm adj}$,
 (with ${\tt DE = \Delta E/E}$) when the density centre is updated and
 escapers removed.
+The accumulated energy error, {\tt DETOT}, gives the systematic drift
+in total energy.
 Considerably more information is given at intervals ${\Delta t}_{\rm out}$
 which are best kept commensurate with ${\Delta t}_{\rm adj}$.
 In this connection, note the facility (\#~32) to increase the output
@@ -527,7 +531,7 @@ For the definition of the total energy see Eq.~(9.29) of the book.
 A large number of counters are displayed; see Table~\ref{counts} for a list
 of the most important.
 In large calculations, some time-step counters may exceed the integer limit
-and are reset to zero above $2 \times 10^9$ (\cf {\tt NIRECT, NURECT}).
+and are reset to zero above $2 \times 10^9$ (\cf {\tt NIRECT, NURECT, NRRECT}).
 
 Finally, note the optional time offset provision (\#35) which prevents large
 values of {\tt TIME/STEP}.
@@ -553,17 +557,18 @@ However, the latter method needs to anticipate future demands.
 
 \section{Two-body regularization}
 
-The KS method first appeared in a standard $N$-body code in time for the
-Cambridge IAU Colloquium \#~10 [Aarseth 1972].
+The KS method first appeared in a standard $N$-body code at the
+Cambridge IAU Colloquium \#~10 in 1970 [Aarseth 1972].
 It was an instant success and has proved a mainstay for treating binaries
 and close two-body encounters ever since.
 Like any versatile algorithm, it has progressed through several distinct
 versions until ending up with the highly accurate Stumpff formulation
-[Mikkola \& Aarseth 1998].
-Although the underlying mathematics is very precise, its implementation is
-something of a black art, employing a variety of heuristic procedures.
-This is particularly the case when dealing with more complicated interactions
-in compact subsystems.
+[Mikkola \& Aarseth 1998]; or alternatively the KS block-step scheme
+[Nitadori 2012].
+Although the underlying mathematics is very precise, implementations are
+something of a black art, with a variety of heuristic procedures.
+This is particularly the case when dealing with interactions in compact
+subsystems.
 
 An arbitrary number of KS solutions are treated at the same time.
 Decision-making is essentially controlled by two input parameters which are
@@ -577,10 +582,10 @@ are advanced to the same time.
 Note that the relative time-step criterion gives very similar values for
 different masses during close encounters.
 Implementations of the KS transformations and polynomial initialization have
-been described in considerable detail elsewhere (Aarseth 1985, 2001b, 2003).
+been described in considerable detail elsewhere [Aarseth 1985, 2001b, 2003].
 It is therefore sufficient to discuss some aspects of the
 decision-making.\footnote{The data structure is described in
-section~\ref{data}.}
+Section~\ref{data}.}
 
 As noted in a previous section, all relevant KS solutions are considered
 at the start of the integration cycle and not advanced beyond the end of the
@@ -626,22 +631,25 @@ The computational requirements for direct integration of the inner binary may
 be quite severe; yet the semi-major axis hardly changes even for modest
 distance ratios.
 Since this is the most important binary element, it would seem justified to
-adopt the \cm approximation and recast the KS solution for the outer
+adopt the \cm approximation and introduce the KS solution for the outer
 component, thereby increasing the period and replacing one direct
 integration.
 This procedure neglects short-term fluctuations and assumes no secular
 change, in qualitative agreement with first-order perturbation theory.
 
 Although simple stability criteria were already introduced in the mid 1980s,
-the chaos approach provides greater theoretical justification and has given
-rise to a semi-analytical criterion [Mardling \& Aarseth 1999].
+the chaos approach provided some theoretical justification and led to
+a semi-analytical criterion [Mardling \& Aarseth 1999].
 More recently, a general three-body stability criterion has been developed
 from first principles [Mardling 2008].
-It is valid for a wide mass range and all inclinations and the robustness
-has been verified by numerical tests.
-We also mention that the code now includes an optional averaging method
+It is valid for different masses and inclinations and was found to be more
+reliable than older criteria.
+The code also includes an optional averaging method
 to model the eccentricity oscillations (Kozai cycles) induced by high
 inclinations.
+However, a new stability criterion [Valtonen 2014] has now been extensively
+tested and appears more robust, particularly for large mass ratios.
+This algorithm has now been adopted throughout.
 
 The identification of suitable configurations is carried out for small \cm
 time-steps and the first part of the procedure employs the same algorithm
@@ -687,15 +695,15 @@ small labelled {\tt common} block {\ZZ {BINARY}} which contains original
 masses and particle names (as well as the basic KS variables for any second
 pair).
 
-A new stability criterion has now been developed from first principles
-[Mardling 2008].
-This formulation includes the effect of the inner eccentricity as well as the
-inclination and is currently (Nov 2007) valid for
-$m_2/m_1 > 0.05$ or $m_3/m_1 > 0.05$.
-Although the stability boundaries are qualitatively similar, the new
-criterion is more general.
-The old criterion is still used in a few places, with the inclination now
-given in radians.
+%A new stability criterion has now been developed from first principles
+%[Mardling 2008].
+%This formulation includes the effect of the inner eccentricity as well as the
+%inclination and is currently (Nov 2007) valid for
+%$m_2/m_1 > 0.05$ or $m_3/m_1 > 0.05$.
+%Although the stability boundaries are qualitatively similar, the new
+%criterion is more general.
+%The old criterion is still used in a few places, with the inclination now
+%given in radians.
 
 \section{Chain regularization}
 
@@ -703,13 +711,26 @@ Several methods are available for treating strong interactions involving more
 than two particles.
 The original AZ three-body regularization was implemented first, followed by
 Heggie's global method for four particles [\cf Aarseth 1985].
-For simplicity, these formulations did not include external perturbations.
+For simplicity, these formulations do not include external perturbations.
 The versatile chain regularization [Mikkola \& Aarseth 1990, 1993, 1996]
 which includes perturbations has proved more effective.
 Because of the increased complexity, the relevant routines are placed in the
 separate directories {\tt Chain} and {\tt Nchain}.
 Since only one configuration at a time is considered at present, the two
 unperturbed treatments are still maintained but rarely needed.
+
+Over the last few years, special efforts have gone into implementation of
+algorithmic regularization [Mikkola \& Merritt 2009]. There are two new
+directories, {\tt ARchain \& ARint} which are analogous to standard chain
+regularization.
+However, a full post-Newtonian treatment is also included [Aarseth 2012],
+together with tidal disruption.
+The different outcomes involve rather complicated decision-making.
+Thus there are two channels for stellar disruption: either via a KS
+regularization or inside a chain (ARC only).
+Additionally, a new procedure for initiating chain or ARC regularization
+for strongly perturbed KS binaries has been introduced which brings further
+complications.
 
 Close multiple encounters are characterized by one or more small \cm
 time-steps.
@@ -752,8 +773,8 @@ effect of perturbers, and likewise at termination.
 Since the device of ghost particles is adopted to preserve the sequential
 arrangement, the actual masses are saved together with the corresponding
 names.
-It is then a simple matter to recover the relevant global locations for
-initialization.
+It is then a simple matter to recover the relevant global locations of
+ghosts for initialization.
 In the case of three initial members, the binary components are placed in the
 first two single particle locations, as for standard KS termination, while
 the third body is turned into a ghost particle {\it in situ}.
@@ -808,9 +829,11 @@ A list of stellar evolution indicators $k^{\ast}$ is included in routine
 for decision-making.
 Reimers-type wind loss is adopted in addition to supernova events, where the
 latter result in neutron star or even black hole formation.
+A more comprehensive treatment of wind mass loss has also been included
+in the 2015 version, together with a revised scheme for velocity kicks
+and final masses of NSs/BHs.
 
-For convenience, mass loss corrections are implemented when the accumulated
-wind loss exceeds $1\%$.
+For convenience, mass loss corrections are implemented when significant.
 This entails modifying the force and first derivative of each neighbour, as
 well as subtracting the potential energy change assuming instantaneous mass
 loss from the cluster.
@@ -820,11 +843,11 @@ Neutron stars are currently assigned a kick velocity sampled from a
 Maxwellian with relatively large dispersion [\cf Hansen \& Phinney 1997]
 which usually leads to disruption of close binaries and escape of single
 stars.
-However, there is also a choice of modest kick velocities.
+However, there is now (Nov 2015) a choice of modest kick velocities.
 An optional procedure (\#~37) is included in order to avoid a sudden close
 approach by high-velocity particles.
 
-The code now contains a realistic recipe for physical collisions,
+The code contains a realistic recipe for physical collisions,
 implemented for KS solutions and all multiple regularizations.
 This scheme has been used successfully in the private {\ZZ {NBODY4}}.
 Depending on stellar type of the components, complete mixing or common
@@ -835,7 +858,7 @@ With chain regularization, an iterative procedure is used to determine the
 exact pericentre if the closest two-body separation lies inside a suitably
 small value.
 The energy of the collision pair is evaluated indirectly using well defined
-variables rather than from the two-body elements.
+variables rather than directly from the coordinates and velocities.
 With more than three chain members, the membership is reduced and the
 calculation continued, otherwise standard termination follows.
 
@@ -875,8 +898,8 @@ The corresponding contributions to the total energy are included
 (\cf {\tt ETIDE} in {\tt xtrnlv.f}), thereby facilitating conservation checks.
 However, the linearized form of the equations of motion are not appropriate
 well outside the tidal radius.
-Hence a more detailed exploration of ejected stars is restricted to modest
-distances.
+Hence a more detailed exploration of ejected stars should be restricted to
+modest distances.
 
 In order to broaden the scope for studying more general cluster motion, a
 full 3D galactic model has been implemented (\#~14~= 3).
@@ -891,6 +914,8 @@ requirement of being computationally convenient for the Hermite scheme.
 In order to provide more flexibility, any combination of the components may
 be used by varying some of the input parameters (\cf routine {\tt xtrnl0.f}
 and the special input template in directory {\tt Docs}).
+Note that eccentric orbits in the galactic plane can also be studied in this
+model.
 
 The tidal effect on cluster members is obtained by including the
 differential force of the Galaxy with respect to the cluster centre.
@@ -961,7 +986,7 @@ energy contributions at output time.
 
 Procedures for studying the growth of tidal tails by fast integration have
 been added to the code.
-This facility can be particularly useful for cluster orbits in the 3D
+This facility can be particularly useful for cluster orbits in a 3D
 galactic potential since the linearized tidal energy corrections tend to
 become less accurate at large distances.
 Consequently, a substantial speed-up may be achieved for large systems.
@@ -1007,7 +1032,7 @@ prediction added.
 Note that the time-steps are usually of the maximum size specified by the
 input parameter {\tt SMAX}, and quantized values are used for a uniform
 treatment.
-This ensures that the data are available with the highest accuracy at main
+This ensures that the data is available with the highest accuracy at main
 output times.
 
 Some simple additions to other routines facilitate the decision-making.
@@ -1040,7 +1065,7 @@ perturber list containing all the neighbours would be too small; \ie
 $a (1 + e)/ \gamma_{\rm min}^{1/3} > R_{\rm s}$ (with $R_{\rm s}$ the
 neighbour radius) and yet the binding energy may be large.
 This situation improves with increasing $N$ since we have
-$R_{\rm cl} \propto 1/N$ while the interparticle separation goes as
+$R_{\rm cl} \propto 1/N$ while the interparticle separation scales as
 $1/N^{1/3}$.
 
 Another difficult condition arises for borderline cases of hierarchies which
@@ -1055,17 +1080,17 @@ configurations are formed.
 In order to investigate a given problem, it is useful to halt the
 calculation before including some diagnostics.
 This can be achieved by typing `{\tt touch STOP}' at any time,
-whereupon a {\tt common} save will occur on {\tt fort.1} if \#~1~$>$ 0),
+whereupon a {\tt common} save may occur on {\tt fort.1} (if \#~1~$>$ 0),
 from which a restart can be made.
 
 Although the external energy binding the cluster may be feeble, superhard
 binaries tend to have strong interactions enhanced by their gravitational
 focusing.
-Even if not present initially, such binaries may form via tidal
-circularization.
+Even if not present initially, such binaries may shrink via tidal
+circularization or common envelope interactions.
 In any case, some shrinkage by dynamical means is possible before ejection
 by recoil intervenes.
-Thus a small deviation of the total energy would rise to a
+Thus a small change in the total energy would give rise to a
 disproportionately large relative error because the external energy appears
 in the denominator.
 If larger, the relative error is therefore replaced by 100 times the actual
@@ -1084,11 +1109,12 @@ The following colleagues have made substantial contributions to the code:
 
 \item Seppo Mikkola ~~~~~~~~~~~~~~~~~~~Two-body and chain regularization
 \item Chris Tout \& Jarrod Hurley ~~Stellar evolution and collisions
-\item Rosemary Mardling~~~~~~~~~~~~~~Stability of hierarchical systems
+\item Rosemary Mardling~~~~~~~~~~~~~~Tidal circularization
+\item Keigo Nitadori~~~~~~~~~~~~~~~~~~~~GPU \& KS block-steps
 \end{itemize}
 
 \bigskip
-Version 7.3.0 12/2009; updated 6/2012.
+Version 8.3.0 11/2015
 
 \newpage
 \section*{References}
@@ -1239,13 +1265,13 @@ Mikkola, S. \& Aarseth, S.J. [1993], `An implementation of $N$-body chain
 \medskip
 \noindent
 Mikkola, S. \& Aarseth, S.J. [1996], `A slow-down treatment for close binaries',
-\CMD {\bf 64}, 197--208
+\CMD {\bf 64}, 197--208 
 
 \medskip
 \noindent
 Mikkola, S. \& Aarseth, S.J. [1998], `An efficient integration method for
 binaries in $N$-body simulations',
-{\it New Astron.} {\bf 3}, 309--20
+{\it New Astron.} {\bf 3}, 309--20 
 
 \medskip
 \noindent
@@ -1254,22 +1280,41 @@ of mass in galaxies', {\it Publ. Astron. Soc. Japan} {\bf 27}, 533--43
 
 \medskip
 \noindent
+Nitadori, K. [2012], `An implementation of KS regularization with Hermite
+integrator and block timestep', unpublished
+
+\medskip
+\noindent
+Nitadori, K. \& Aarseth, S.J. [2012], `Accelerating NBODY6 with graphics
+processing units', \MN {\bf 424}, 545--52 
+
+\medskip
+\noindent
 Portegies Zwart, S.F., Hut, P., McMillan, S.L.W. \& Verbunt, F. [1997],
 `Star cluster ecology, II. Binary evolution with single-star encounters',
 {\it Astron. Astrophys.} {\bf 328}, 143--57
 
-\medskip
-\noindent
-Spurzem, R. [1999], `Direct N-body simulations',
-{\it J. Comp. Appl. Maths}, {\bf 109}, 407--32
+%\medskip
+%\noindent
+%Spurzem, R. [1999], `Direct N-body simulations',
+%{\it J. Comp. Appl. Maths}, {\bf 109}, 407--32 
 
 \medskip
 \noindent
 Tout, C.A., Aarseth, S.J., Pols, O. \& Eggleton, P. [1997], `Rapid binary
 star evolution for $N$-body simulations and population synthesis',
-\MN {\bf 291}, 732--48
+\MN {\bf 291}, 732--48 
 
-\newpage
+\medskip
+\noindent
+Valtonen, M. [2014], `Hiararchical stability criterion', AAS meeting 
+
+\medskip
+\noindent
+Wang, L., \etal [2015], `The gravitational million-body problem',
+ MNRAS {\bf 450}, 4070
+
+%\newpage
 
 \section{Appendix}
 
@@ -1327,7 +1372,7 @@ $R_{\rm cl}$ &{\ZZ{RMIN}} &Distance criterion for KS regularization &0&001\\
 $\etaU$ &{\ZZ{ETAU}} &Regularized time-step parameter &0&2 \\
 $h_{\rm hard}$ &{\ZZ{ECLOSE}} &Energy per unit mass for hard binary &1&0 \\
 $\gamma_{\rm min}$ &{\ZZ{GMIN}} &Limit for unperturbed KS motion &1&0 $\times 10^{-6}$\\
-$\gamma_{\rm max}$ &{\ZZ{GMAX}} &Termination criterion for soft binaries &0&01 \\
+$\gamma_{\rm max}$ &{\ZZ{GMAX}} &Termination criterion for soft binaries &0&001 \\
 \hline\hline
 \end {tabular}
 \end{table}
@@ -1336,7 +1381,8 @@ $\gamma_{\rm max}$ &{\ZZ{GMAX}} &Termination criterion for soft binaries &0&01 \
 The main options are listed below.
 For a complete list see routine {\tt define.f}.
 To find where option \# $J$ is used, type `{\tt grep KZ(J) *.f}' in
-the $N$-body directories (or just 'KZ' in the directory {\tt Chain}).
+the $N$-body directories (or just 'KZ' in the directory {\tt Chain} or
+{\tt ARchain}).
 
 \begin{table}[h]
 \centering
@@ -1347,10 +1393,12 @@ the $N$-body directories (or just 'KZ' in the directory {\tt Chain}).
 1 &Common save on unit 1 by {\tt touch STOP} or TIME $>$ TCRIT \\
 2 &Common save on unit 2 at output time or restart \\
 3 &Data bank on unit 3 with specified frequency \\
+%4 &Black hole mass histogram (>1; M/4 + 1) \\
 5 &Standard initial conditions (=0: uniform; =1: Plummer) \\
 6 &Output of significant \& KS binaries (=1, 2, 3 \& 4) \\
 7 &Output of Lagrangian radii (several types) \\
 8 &Primordial binaries (extra input required) \\
+9 &Binary output \\
 10 &Regularization diagnostics (=2: NEW KS \& END KS) \\
 12 &HR diagnostics of evolving stars (interval {\ZZ{DTPLOT}}) \\
 13 &Interstellar clouds (extra input required) \\
@@ -1368,19 +1416,22 @@ the $N$-body directories (or just 'KZ' in the directory {\tt Chain}).
 27 &Tidal circularization (=1: sequential; =2: chaos; =3: GR capture) \\
 28 &GR radiation for NS \& BH binaries (with \#19 = 3; choice of \#27) \\
 30 &Chain regularization ($>$ 1: special diagnostics) \\
+31 &Cluster centre of mass correction \\
 32 &Increase of output interval (limited by $t_{\rm cr}$) \\
 33 &Distribution of block-steps at output (=1 or 2) \\
 34 &Roche-lobe overflow (=1: synhronization) \\
 35 &Integration time offset (standard = 100 time units) \\
-36 &Step reduction for hierarchies (suppressed) \\
-37 &Neighbour additions ($> 0$: high-velocity; $> 1$: not rec.) \\
+%37 &Neighbour additions ($> 0$: high-velocity; $> 1$: not rec.) \\
 38 &Force polynomial corrections (=0: I $>$ N; not rec.) \\
 40 &Neighbour number control ($>=2$: fine-tuning to {\ZZ{NNBMAX}}/5) \\
+%41 &Pre-mainsequence stellar evolution (solar Z) \\
+%43 &Velocity kick after GR binary coalescence \\
 \hline\hline
 \end{tabular}
 \end{table}
 
-\newpage
+\clearpage
+%\newpage
 
 Table~\ref{counts} defines significant counters, together with an actual
 example from run with 1800 single particles and 200 primordial binaries.

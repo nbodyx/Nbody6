@@ -210,8 +210,8 @@
           IF (JCLOSE.GT.N.AND.NN.GE.5) GO TO 10
           CALL ABSORB(ISUB)
 *
-*       Reduce block-time since new c.m. step may be very small.
-          TBLOCK = MIN(TIME,TBLOCK)
+*       Reduce time since new c.m. step may be very small.
+          TIME = MIN(TIME,TBLOCK)
 *
 *       Activate indicator for new chain treatment and try a second search.
           KCASE = 1
@@ -401,6 +401,7 @@
    28             FORMAT (' CHAIN ESCAPE:    IESC JESC NM RI RDOT2 ',
      &                                      '2*M/R RB VINF ',
      &                                       2I3,2I6,1P,4E9.1,0P,F6.1)
+                  KCASE = -2
               END IF
 *       Enforce termination (KCASE < 0) if NCH <= 4 (final membership <= 2).
               IF (NCH.LE.4) THEN
@@ -558,6 +559,7 @@
    35         FORMAT (' CHAIN ESCAPE:    IESC NM RI RDOT2 2*M/R VF ',
      &                                   I3,I6,1P,3E9.1,0P,F6.1)
           END IF
+          KCASE = -2
 *       Ensure single body is removed in case of wide binary.
           JESC = 0
       ELSE
@@ -572,7 +574,7 @@
           RSUM = RSUM - 1.0/RINV(IM) - RB
           CALL REDUCE(IESC,JESC,ISUB)
       ELSE
-          KCASE = -1
+          IF (KCASE.EQ.0) KCASE = -1
       END IF
 *
 *       Set phase indicator < 0 to ensure new time-step list in INTGRT.

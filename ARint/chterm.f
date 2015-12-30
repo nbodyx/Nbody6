@@ -28,12 +28,12 @@
       DO K = 1,3
           X0(K,ICM) = X(K,ICM)
           X0DOT(K,ICM) = XDOT(K,ICM)
-          VI20 = VI20 + XDOT(K,ICM)**2
+          VI20 = VI20 + X0DOT(K,ICM)**2
       END DO
 *
 *       Include optional kick velocity of 3*VRMS km/s for GR coalescence.
       IF (KZ(43).GT.0.AND.NBH2.EQ.1) THEN
-          VF = 3.0*(VRMS/VSTAR)/SQRT(VI20)
+          VF = 5.0*(VRMS/VSTAR)/SQRT(VI20)
           DO 10 K = 1,3
               XDOT(K,ICM) = VF*XDOT(K,ICM)
               X0DOT(K,ICM) = XDOT(K,ICM)
@@ -43,7 +43,8 @@
           VESC = 3.0*VRMS
           WRITE (6,20)  VF, ECD0-ECDOT, SQRT(VI20)*VSTAR, VESC
    20     FORMAT (' COALESCENCE KICK    VF ECDOT VCM VESC ',
-     &                                  F7.3,F10.6,2F6.1)
+     &                                  F7.2,F10.6,2F6.1)
+          CALL FLUSH(6)
       END IF
 *
 *       Form neighbour list and new polynomials.
@@ -52,8 +53,11 @@
       CALL FPOLY1(ICM,ICM,0)
       CALL FPOLY2(ICM,ICM,0)
 *
+*     IF (NSTEP1.GT.100) THEN
       WRITE (6,40)  LIST(1,ICM), STEP(ICM), STEPR(ICM), BODY(ICM)
    40 FORMAT (' TERMINATE ARC    NNB SI SR BCM ',I5,1P,3E10.2)
+*     END IF
+      CALL FLUSH(6)
 *
 *       Reduce subsystem counter and initialize membership & internal energy.
       NSUB = MAX(NSUB - 1,0)

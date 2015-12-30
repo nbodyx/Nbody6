@@ -27,13 +27,12 @@
           END IF
    10 CONTINUE
 *
+   12 CONTINUE
 *       Include safety procedure in case c.m. body not identified.
-   12 WRITE (6,15)  ISUB, NCM
+      WRITE (6,15)  ISUB, NCM
    15 FORMAT (5X,'WARNING!   SUBSYSTEM TERMINATION   ISUB =',I3,
      &                                                     '  NCM =',I5)
       STEPS(ISUB) = 0.0D0
-      WRITE (6,60)  ISUB, NCH, ICH, NAME(ICH)
-   60 FORMAT (' EXTEND:   ISUB NCH ICH NAME(ICH) ',4I5)
       GO TO 40
 *
 *       Determine the largest perturbing force (M/R**3).

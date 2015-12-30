@@ -93,12 +93,12 @@
   85    34   Mass transfer diagnostics on ROCHE (roche.f)
   86    19   Common envelope in chain regularization (cmbody.f)
   87     8   Hierarchical data bank on HIDAT (# 8 > 3; hidat.f)
-  88     -   Not used
+  88    48   Three-body stability comparison diagnostics
   89    37   Diagnostic output for quadruples (two types; impact.f)
-  90     -   Not used
+  90    48   Failed three-body stability tests (> 1)
   91    19   New blue straggler formation (mix.f)
   92    34   Spin synchronization diagnostics (suppressed)
-  93     -   Not used
+  93     4   Black hole histogram (factor of 2 from 4 Msun; #4 > 1)
   94     -   Not used
   95    27   Diagnostic spin information for WDs (spiral.f)
   96    27   Diagnostics for eccentricity decrease (spiral.f)

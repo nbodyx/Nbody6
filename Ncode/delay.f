@@ -8,6 +8,15 @@
       COMMON/SAVEIT/  IPH0,KS0,KCH0,KS20,JC0,JCL0
 *
 *
+*       Ensure correct value of IPHASE (KSPAIR is set for IPH=4 & 8).
+      IF (KS.EQ.-2) THEN
+*       Avoid merger (IPH = 6) if chain indicator set by KSINT.
+          IF (IPH0.EQ.8.AND.KCH.EQ.6) GO TO 10
+          IPH0 = KCH
+          IPHASE = KCH    ! Note merger may be specified on same block-step.
+          GO TO 10
+      END IF
+*
 *       Check for saving KS pointers from IMPACT or termination at TBLOCK.
       IF (KS.GE.0) THEN
           IPH0 = IPHASE
@@ -22,8 +31,8 @@
           KSPAIR = KS0
           KCHAIN = KCH0
           KS2 = KS20
-          JCOMP = JC0
-          JCLOSE = JCL0
+          JCOMP = JC0      ! JCOMP copied back from KSINT (still = 0).
+          JCLOSE = JCL0    ! JCLOSE copied back from labelled common.
 *      Preserve contents of KSAVE during chain regularization.
           IF (NCH.EQ.0) THEN
               KSAVE(1) = 0
@@ -36,8 +45,8 @@
               GO TO 10
           END IF
 *
-*       Include the case of two interacting KS pairs (inert KS excluded).
-          IF (JCOMP.GT.N) THEN
+*       Include the case of two interacting KS pairs.
+          IF (JCLOSE.GT.N) THEN
               IF (KCHAIN.GT.0.AND.KSTAR(N+KSPAIR).NE.0) THEN
                   KSAVE(1) = KSTAR(N+KSPAIR)
                   KSAVE(2) = NAME(2*KSPAIR-1) + NAME(2*KSPAIR)
@@ -48,15 +57,15 @@
               KSPAIR = KS2
 *       Specify JCOMP < 0 to prevent spurious prediction second KSTERM call.
               JCOMP = -1
-*       Set JCLOSE = 0 to prevent KSTERM in SETSYS for #26 < 2. (bug 23/4/14)
-              IF (KZ(26).LT.2) JCLOSE = 0  ! IF statement added 14/6/14
+              IF (KZ(26).LT.2) JCLOSE = 0   ! bug fix 14/6/14 (maybe?)
           END IF
 *
 *       Save KSTAR (> 0) and sum of component names (for chain termination).
-      IF (KCHAIN.GT.0.AND.KSTAR(N+KSPAIR).NE.0.AND.KSKIP.EQ.0) THEN
-          KSAVE(1) = KSTAR(N+KSPAIR)
-          KSAVE(2) = NAME(2*KSPAIR-1) + NAME(2*KSPAIR)
-      END IF
+          IF (KCHAIN.GT.0.AND.KSTAR(N+KSPAIR).NE.0.AND.
+     &        KSKIP.EQ.0) THEN
+              KSAVE(1) = KSTAR(N+KSPAIR)
+              KSAVE(2) = NAME(2*KSPAIR-1) + NAME(2*KSPAIR)
+          END IF
 *
 *       Terminate binary in triple or widest binary-binary collision pair.
           CALL KSTERM
@@ -65,6 +74,8 @@
           IF (KCHAIN.GT.0) THEN
               IPHASE = 8
           END IF
+*       Copy index for SETSYS (JCLOSE > N suffices for B-B case).
+***       JCLOSE = JC0     !! JC0 serves no purpose now (12/2015).
       END IF
 *
    10 RETURN

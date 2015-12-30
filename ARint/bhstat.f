@@ -146,8 +146,8 @@
 *       Include data for any chain c.m.
       IF (NCH.GT.0) THEN
           VI2 = XDOT(1,ICH)**2 + XDOT(2,ICH)**2 + XDOT(3,ICH)**2
-          WRITE (95,50)  TTOT, ECC, PMIN, RICH, EI(LX), VI2
-   50     FORMAT (' ',F8.2,F7.3,F6.1,1P,2E10.2,0P,F7.3)
+          WRITE (95,50)  TTOT, ECCGR, PMIN, RICH, EI(LX), VI2
+   50     FORMAT (' ',F8.2,F9.5,F6.1,1P,2E10.2,0P,F7.3)
           CALL FLUSH(95)
       END IF
 *

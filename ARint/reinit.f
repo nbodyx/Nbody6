@@ -26,7 +26,7 @@
 *       Re-initialize neighbour list of c.m. and form perturber list.
       RS0 = RS(ICH)
       CALL NBLIST(ICH,RS0)
-      IF (NCH.GT.2) CALL CHLIST(ICH)  !  avoids large GPERT at the end.
+      IF (NCH.GT.2) CALL CHLIST(ICH)   ! avoid large GPERT at the end.
       NNB1 = LIST(1,ICH) + 1
 *
 *       Predict neighbours to FDOT and c.m. to FDOT3.
@@ -44,8 +44,8 @@
     5 CONTINUE
       CALL CHFIRR(ICH,2,X(1,ICH),XDOT(1,ICH),FIRR,FD)
       DO 10 K = 1,3
-          F(K,ICH) = F(K,ICH) + 0.5*FIRR(K)       !factorial bugs 4/7/07
-          FDOT(K,ICH) = FDOT(K,ICH) + ONE6*FD(K)
+          F(K,ICH) = F(K,ICH) + FIRR(K)
+          FDOT(K,ICH) = FDOT(K,ICH) + FD(K)
    10 CONTINUE
       CALL FPOLY2(ICH,ICH,0)
 *

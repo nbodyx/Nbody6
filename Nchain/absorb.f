@@ -43,6 +43,8 @@
 *
 *       Avoid prediction skip by XVPRED in case TIME - T0 = 0.0.
       IF (TIME - T0(ICH).EQ.0.0D0) TIME = TIME + DT8/16.0D0
+*       Include safety check on negative step (may be too large for SETSYS).
+      IF (TIME-T0(JCLOSE).LT.0.0) TIME = TBLOCK
 *
 *       Re-define initial epoch for consistency (ignore phase error).
       T0S(ISUB) = TIME - TIMEC

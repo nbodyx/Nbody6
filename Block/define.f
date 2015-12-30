@@ -186,7 +186,8 @@
 *       3  Basic data unit 3 at output time (unformatted, frequency NFIX;
 *             =1/2: standard and tail; =3: tail only; >3: cluster + tail).
 *       4  Binary diagnostics on unit 4 (# threshold levels = KZ(4) < 10);
-*                                       (suppressed in input.f & ksint.f).
+*                                       (suppressed in input.f & ksint.f);
+*                                 new usage: number of NS & BH on unit #4.
 *       5  Initial conditions (#22 =0; =0: uniform & isotropic sphere);
 *                =1: Plummer; =2: two Plummer models in orbit, extra input;
 *                =3: massive perturber and planetesimal disk, extra input;
@@ -234,7 +235,6 @@
 *              =2, 4: Kroupa 1993; =3, 5: Eggleton; > 1: primordial binaries;
 *              =6, 7: Kroupa 2001; binary correlated m1/m2, also brown dwarfs.
 *              Note: Use PARAMETER (MAXM=1) for setting BODY(1) = BODY10).
-*              KGT93 (Kroupa, Gilmore & Tout 1993) not recommended.
 *      21  Extra output (>0: MODEL #, TCOMP, DMIN, AMIN; >1: NESC by JACOBI).
 *      22  Initial m, r, v on #10 (=1: output; >=2: input; >2: no scaling;
 *              =2: m, r, v on #10 in any units; scaled to standard units;
@@ -246,8 +246,7 @@
 *                           >=3: initialization & integration of tidal tail.
 *      24  Initial conditions for subsystem (M,X,V routine SCALE; KZ(24)= #);
 *                           <0: ZMH & RCUT (N-body units) Zhao model (#5>=6).
-*      25  Velocity kicks for white dwarfs (=1: type 11 & 12; >1: all WDs).
-*      25  Partial reflection of KS binary orbit (GAMMA < GMIN; suppressed).
+*      25  Velocity kicks for white dwarfs (>0: all WDs, see kick.f).
 *      26  Slow-down of two-body motion (>=1: KS; >=2: chain; =3: rectify).
 *      27  Tidal effects (=1: sequential; =2: chaos; =3: GR energy loss);
 *                         =-1: collision detector, no coalescence, #13 < 0.
@@ -255,7 +254,7 @@
 *                         =4 and #27 = 3: neutron star capture (instar.f).
 *      29  Boundary reflection for hot system (suppressed).
 *      30  Multiple regularization (=1: all; >1: BEGIN/END; >2: each step);
-*                                =-1: CHAIN only; =-2: TRIPLE & QUAD only. 
+*                                 =-1: CHAIN only; =-2: TRIPLE & QUAD only.
 *      31  Centre of mass correction after ADJUST (don't use with #23 = 0).
 *      32  Increase output intervals & SMAX based on single particle energy.
 *      33  Histograms at main output (>=1: STEP; =2: STEPR, NBHIST & BINARY).
@@ -273,19 +272,21 @@
 *      41  Pre-mainsequence stellar evolution (only solar metallicity).
 *      42  Kozai diagnostics on fort.42 (=1: frequency 100 & EMAX > 0.99).
 *      43  Small velocity kick after GR coalescence (=1, =3; NBODY7 only),
-*                         =2: BH accretion of disrupted star, KSTAR >= 10.
+*                         =2: BH accretion of disrupted star, KSTAR >= 10,
+*                        >=2: disrupted star ejected as ghost, KSTAR < 10.
 *      44  Plotting file for main cluster parameters on fort.56 (OUTPUT).
 *      45  Plotting file for BH (NAME = 1 or 2) on unit 45 (routine BHPLOT);
 *                      primordial BH defined by INSTAR; membership = KZ(24);
 *                          =1: plotting output for BH (one or two);
 *                          >1: BH in KS binary (NCH = 0, unit 45);
 *                          >2: KS & perturber diagnostics (E > 0.9, EX > 0.9);
-*                          >3: output for 2nd innermost BH orbit (unit #49).
+*                          >3: output for 2nd innermost BH orbit (unit #49);
+*                          <0: strong three-body events (impact.f, unit #49).
 *      46  Reserved for data analysis project on NBODY6++.
 *      47  Reserved for data analysis project on NBODY6++.
-*      48  GPU initialization of neighbour lists and forces (FPOLY0).
+*      48  Three-body stability criterion (>0: Valtonen; >1: QST failure).
 *      49  Post-Newtonian perturbations included in KS (dir Block).
-*      50  Not used.
+*      50  Free.
 *       ---------------------------------------------------------------------
 *
 * NBODY6: Restart from fort.1
@@ -363,6 +364,7 @@
 *       ***********************
 *
 *       ---------------------------------------------------------------------
+*      -1       Pre mainsequence.
 *       0       Low main sequence (M < 0.7).
 *       1       Main sequence.
 *       2       Hertzsprung gap (HG).

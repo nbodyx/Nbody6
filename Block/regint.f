@@ -113,7 +113,7 @@
           IF (NAME(I).EQ.0) THEN
               CALL CHFIRR(I,1,XI,XIDOT,FIRR,FD)
           ELSE
-*       Search the chain perturber list for #I.
+*       Search the chain perturber list for #ICH.
               NP1 = LISTC(1) + 1
               DO 15 L = 2,NP1
                   J = LISTC(L)

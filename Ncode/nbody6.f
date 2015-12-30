@@ -5,14 +5,14 @@
 *       Regularized N-body code with synthetic stellar evolution.
 *       ---------------------------------------------------------
 *
-*       Hermite integration method with block-steps & AC scheme.
-*       --------------------------------------------------------
-*
-*       Roche-lobe mass transfer & Mardling 2007 stability criterion.
+*       Hermite integration method with Ahmad-Cohen neighbour scheme.
 *       -------------------------------------------------------------
 *
-*       Developed by Sverre Aarseth, IoA, Cambridge (V 7.5 08/10).
-*       ..........................................................
+*       Roche-lobe mass transfer & Valtonen 2015 stability criterion.
+*       -------------------------------------------------------------
+*
+*       Developed by Sverre Aarseth, IoA, Cambridge (V 10.0 10/15).
+*       ...........................................................
 *
 *       Binary and chain regularization: Seppo Mikkola, Turku.
 *       ......................................................
@@ -20,8 +20,8 @@
 *       Stellar evolution: Chris Tout & Jarrod Hurley (Swinburn).
 *       .........................................................
 *
-*       GPU support: Keigo Nitadori, Riken (V 9.0.0 08/10).
-*       ...................................................
+*       GPU support: Keigo Nitadori, Riken (V 9.0 08/10).
+*       .................................................
 *
       PROGRAM NBODY6
 *

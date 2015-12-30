@@ -649,7 +649,7 @@
 *         END IF
 *     END IF
 *
-*     IF (DT0.LT.0.05*STEPR(I)) THEN
+*     IF (DT0.LT.0.01*STEPR(I)) THEN
 *     WRITE (6,120)  NAME(I),NBGAIN,NBLOSS,NNB,TIME,STEPR(I),DT0
 * 120 FORMAT (' SHRINK!    NBG NBL NB T SR DT0  ',
 *    &                     4I6,F8.3,1P,6E10.2)

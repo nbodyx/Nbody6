@@ -95,7 +95,7 @@
     3     TIME = TIME0
 *
 *       Predict X & XDOT for body #JCOMP (note TIME = TBLOCK if second call).
-          IF (N.LT.5000.OR.IPHASE.NE.2) THEN
+          IF (N.LT.5000) THEN
               IF (JCOMP.GE.IFIRST) THEN   ! procedure suppressed for fast code.
                   CALL XVPRED(JCOMP,-1)
                   IF (GAMMA(IPAIR).GT.0.2.AND.JCOMP.LE.N) THEN
@@ -374,25 +374,23 @@
           X0DOT(K,JCOMP) = XDOT(K,JCOMP)
    95 CONTINUE
 *
-*       Form new force polynomials (skip triple, quad, merge & chain).
-      IF (IPHASE.LT.4) THEN
 *       Predict current coordinates & velocities for the neighbours.
-          CALL XVPRED(ICOMP,NNB1)
+      CALL XVPRED(ICOMP,NNB1)
 *
-*       Obtain new polynomials & steps (directly or using FREG from c.m.).
-          IF (N.LT.5000.OR.IPHASE.NE.2) THEN
+*       Form new force polynomials (skip triple, quad, merge & chain).
+      IF (N.LT.5000) THEN
 *       Use old method for non-standard termination (not from nbody6.f).
 *
-              CALL FPOLY1(ICOMP,JCOMP,2)
-              CALL FPOLY2(ICOMP,JCOMP,2)
+          CALL FPOLY1(ICOMP,JCOMP,2)
+          CALL FPOLY2(ICOMP,JCOMP,2)
 *
 *       Improve force polynomials of strong perturber after rectification.
-              IF (JMIN.GE.IFIRST) THEN
-                  CALL FPOLY1(JMIN,JMIN,0)
-                  CALL FPOLY2(JMIN,JMIN,0)
-              END IF
+          IF (JMIN.GE.IFIRST) THEN
+              CALL FPOLY1(JMIN,JMIN,0)
+              CALL FPOLY2(JMIN,JMIN,0)
+          END IF
 *
-          ELSE
+      ELSE
 *
 *       Treat each component in turn.
           I = ICOMP
@@ -495,7 +493,6 @@
           IF (I.EQ.ICOMP) THEN
               I = JCOMP
               GO TO 100
-          END IF
           END IF
 *
 *       Improve force polynomials of strong perturber after rectification.

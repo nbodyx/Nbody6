@@ -40,42 +40,38 @@
 *
 *       Copy chain variables to standard form (CHMOD may be skipped).
       LK = 0
-      DO 400 L = 1,NCH
-          DO 390 K = 1,3
+      DO 4 L = 1,NCH
+          DO 3 K = 1,3
               LK = LK + 1
               X4(K,L) = XCH(LK)
               XDOT4(K,L) = VCH(LK)
-  390     CONTINUE
-  400 CONTINUE
+    3     CONTINUE
+    4 CONTINUE
 *
-*       Include regular diagnostics of smallest binary.
-*     IF (KZ(24).LT.-1) THEN
-      BX = 0.0
-      DO 3 L = 1,NCH
-          IF (BODYC(L).GT.BX) THEN
-              BX = BODYC(L)
-              LX = L
-          END IF
-    3 CONTINUE
 *       Determine dominant chain force for elements of innermost binary.
       FX = 0.0
-      DO 4 K = 1,NCH-1
+      DO 5 K = 1,NCH-1
          K1 = INAME(K)
          K2 = INAME(K+1)
-         FF = (M(K1) + M(K2))*RINV(K)
+         FF = (M(K1) + M(K2))*RINV(K)**2
          IF (FF.GT.FX) THEN
              I1 = K1
              I2 = K2
              FX = FF
          END IF
-    4 CONTINUE
+    5 CONTINUE
 *
+*       Employ dominant components instead of IESC & JESC (JESC may be = 0).
+*     I1 = IESC
+*     I2 = JESC
+      ISING = 0
       SEMIX = 1.0
       KK = I1
-      LX = I2
+      LX = I2    ! use LX for reference to possible binary component.
       RIJ2 = 0.0
       VIJ2 = 0.0
       RDOT = 0.0
+*       Evaluate binary diagnostics before initializing escaper.
       DO 11 K = 1,3
           RIJ2 = RIJ2 + (X4(K,KK) - X4(K,LX))**2
           VIJ2 = VIJ2 + (XDOT4(K,KK) - XDOT4(K,LX))**2
@@ -97,7 +93,7 @@
       ECC = SQRT(ECC2)
       EB = -0.5*M(I1)*M(I2)/SEMIX
 *
-*       Obtain the relativistic elements.
+*       Obtain the relativistic elements if relevant.
       IF (SEMIX.GT.0.0.AND.CVEL.GT.0.0D0) THEN
           CALL GRBIN(M(I1),M(I2),XREL,VREL,SEMI,ECC)
           SEMIX = SEMI
@@ -225,8 +221,8 @@
 *     TIME = T0S(ISUB) + TIMEC
       TIME = TBLOCK
 *     TT = T0S(ISUB) + TIMEC
-*     WRITE (6,444)  TIME, TT, TBLOCK, TT-TBLOCK, TBLOCK-TPREV
-* 444 FORMAT (' TIME   T TT TB TT-TB TB-TP  ',3F11.5,1P,3E10.2)
+*     WRITE (6,110)  TIME, TT, TBLOCK, TT-TBLOCK, TBLOCK-TPREV
+* 110 FORMAT (' TIME   T TT TB TT-TB TB-TP  ',3F11.5,1P,3E10.2)
 *       Re-define initial epoch for consistency (ignore phase error).
 ***   T0S(ISUB) = TIME - TIMEC
 *       NB!!! This looks risky - hence suppress!!
@@ -241,6 +237,8 @@
           RB = 1.0/RINV(IB)
           IF (RB.GT.RMIN.OR.RB.GT.RCR) THEN
               ISING = 1
+*       Switch to KS for small pericentre.
+          IF (SEMIX*(1.0 - ECC).LT.0.1*RMIN) ISING = 0
           END IF
       ELSE
           ISING = 0
@@ -248,10 +246,10 @@
 *
 *       Save global chain variables for correction procedure.
       ZM0S = BODY(ICH)
-      DO 200 K = 1,3
+      DO 120 K = 1,3
           X0S(K) = X(K,ICH)
           V0S(K) = XDOT(K,ICH)
-  200 CONTINUE
+  120 CONTINUE
 *
 *       Make new chain from remaining members.
     2 LK = 0
@@ -302,6 +300,7 @@
       RS0 = RS(ICH)
 *
 *       Search for global index of escaper.
+      I = 0
       DO 40 J = IFIRST,NTOT
           IF (NAME(J).EQ.NAMEC(IESC)) THEN
               I = J
@@ -336,8 +335,12 @@
       GO TO 100
 *
 *       Restore ghost to lists of neighbours (body #I will be skipped).
-   50 JLIST(1) = ICH
-*     CALL NBREST(I,1,NNB)
+   50 NNB = LIST(1,I)
+      DO 52 L = 2,NNB+1
+          JPERT(L-1) = LIST(L,I)
+   52 CONTINUE
+      JLIST(1) = ICH
+      CALL NBREST(I,1,NNB)
 *
       IF (KZ(30).GT.1) THEN
           WRITE (6,53)  NAME0, NAME(ICH), ICH
@@ -360,6 +363,8 @@
           X0DOT(K,ICH) = VCM(K)
    60 CONTINUE
 *
+*       Save escaper in common6 for possible use as single in CHTERM2.
+      JCMAX = I
 *       Restore the mass and transform to global coordinates & velocities.
       BODY(I) = BODYC(IESC)
       T0(I) = TIME
@@ -382,7 +387,7 @@
           DKE = DKE + 0.5*BODYC(IESC)*XDOT4(K,IESC)**2
    65 CONTINUE
 *       Reduce look-up time to compensate for inactive ghost or merged star.
-      IF (KZ(19).GE.3.AND.KZ(11).GT.0) TEV(I) = TIME
+      IF (KZ(19).GE.3.AND.KZ(11).NE.0) TEV(I) = TIME
 *
 *       Remove chain (and clump) mass & reference name of escaper.
       DO 70 L = IESC,NCH
@@ -401,13 +406,13 @@
 *
 *     RR2 = 0.0
 *     VR2 = 0.0
-*     DO 640 K = 1,3
+*     DO 72 K = 1,3
 *     RR2 = RR2 + (X4(K,1) - X4(K,2))**2
 *     VR2 = VR2 + (XDOT4(K,1) - XDOT4(K,2))**2
-* 640 CONTINUE
+*  72 CONTINUE
 *     IF (ID.GT.0) EREL = 0.5*VR2 - (BODYC(1)+BODYC(2))/SQRT(RR2)
-*     IF (ID.GT.0) WRITE (6,642)  EREL
-* 642 FORMAT (' EREL2  ',F12.7)
+*     IF (ID.GT.0) WRITE (6,74)  EREL
+*  74 FORMAT (' EREL2  ',F12.7)
 *       Re-initialize c.m. & perturber list (2nd time on binary escape).
       IF (JESC.LE.0) THEN
           CALL REINIT(ISUB)
@@ -468,8 +473,8 @@
           VIJ2 = 0.0
           RDOT = 0.0
           DO 86 K = 1,3
-              F(K,I) = F(K,I) + 0.5*FIRR(K)       !factorial bugs 4/7/07
-              FDOT(K,I) = FDOT(K,I) + ONE6*FD(K)
+              F(K,I) = F(K,I) + FIRR(K)
+              FDOT(K,I) = FDOT(K,I) + FD(K)
               RIJ2 = RIJ2 + (X(K,I) - X(K,ICH))**2
               VIJ2 = VIJ2 + (XDOT(K,I) - XDOT(K,ICH))**2
               RDOT = RDOT + (X(K,I) - X(K,ICH))*(XDOT(K,I)-XDOT(K,ICH))
@@ -502,6 +507,8 @@
 *       Initialize KS regularization after second reduction.
           ICOMP = MIN(ICLOSE,I)
           JCOMP = MAX(ICLOSE,I)
+*       Obtain new neighbour list to include current chain c.m. body.
+          CALL NBLIST(ICOMP,RS0)
           CALL KSREG
           CALL CHLIST(ICH)
       END IF

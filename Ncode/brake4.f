@@ -12,7 +12,7 @@
 *
 *
 *       Check relativistic conditions (at least one >= NS).
-      IF (MAX(KSTAR(I1),KSTAR(I2)).LT.13.OR.KZ(11).EQ.0) GO TO 100
+      IF (MAX(KSTAR(I1),KSTAR(I2)).LT.13) GO TO 100
 *
 *       See whether CLIGHT has been initialized in ARchain.
       IF (ITER.EQ.0) THEN

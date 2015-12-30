@@ -95,28 +95,57 @@
       NAM1 = NAME(ICOMP)
       NAM2 = NAME(JCOMP)
 *
-*       Perform KS regularization of dominant components.
-      CALL KSREG
+*       Determine the two-body separation.
+      RIJ2 = 0.0
+      DO 32 K = 1,3
+          RIJ2 = RIJ2 + (X(K,ICOMP) - X(K,JCOMP))**2
+   32 CONTINUE
+      RIJ = SQRT(RIJ2)
+*
+*       Choose between initializing two single particles or a close pair.
+      IF (RIJ.GT.4.0*RMIN) THEN        ! 4*RMIN is a good compromise.
+          CALL NBLIST(JCOMP,RS0)
+          CALL FPOLY1(ICOMP,ICOMP,0)
+          CALL FPOLY1(JCOMP,JCOMP,0)
+          CALL FPOLY2(ICOMP,ICOMP,0)
+          CALL FPOLY2(JCOMP,JCOMP,0)
+*         WRITE (6,33)  ICOMP, JCOMP, ICH, JCMAX, STEP(JCMAX), RIJ
+*  33     FORMAT (' CHAIN FPOLY INIT   IC JC ICH JCX SI RIJ ',
+*    &                                 4I6,1P,2E10.2)
+          I = JCMAX             ! Copied from REDUCE.
+*       Initialize single body #I different from ICOMP/JCOMP with small STEP.
+          IF (STEP(I).LT.1.0D-04.AND.I.LE.N) THEN
+              IF (I.NE.ICOMP.AND.I.NE.JCOMP) THEN
+                  RS0 = RS(I)
+                  CALL NBLIST(I,RS0)
+                  CALL FPOLY1(I,I,0)
+                  CALL FPOLY2(I,I,0)
+              END IF
+          END IF
+      ELSE
+*       Initialize KS regularization of dominant components (NN = 2).
+          CALL KSREG
 *
 *       Search for missing dominant bodies in perturber list.
-      J1 = 2*NPAIRS - 1
-      NP = LIST(1,J1)
-      DO 40 L = 2,NP+1
-          J = LIST(L,J1)
-          NB1 = LIST(1,J) + 1
-          I0 = 0
+          J1 = 2*NPAIRS - 1
+          NP = LIST(1,J1)
+          DO 40 L = 2,NP+1
+              J = LIST(L,J1)
+              NB1 = LIST(1,J) + 1
+              I0 = 0
 *       Check whether the former IC1 & IC2 are members.
-          DO 33 LL = 2,NB1
-              JJ = LIST(LL,J)
-              IF (NAME(JJ).EQ.NAM1.OR.NAME(JJ).EQ.NAM2) I0 = I0 + 1
-   33     CONTINUE
+              DO 35 LL = 2,NB1
+                  JJ = LIST(LL,J)
+                  IF (NAME(JJ).EQ.NAM1.OR.NAME(JJ).EQ.NAM2) I0 = I0 + 1
+   35         CONTINUE
 *
 *       Add new c.m. at the end after failed search (NBREST not used).
-          IF (I0.EQ.0.AND.LIST(NB1,J).NE.NTOT) THEN
-              LIST(NB1+1,J) = NTOT
-              LIST(1,J) = LIST(1,J) + 1
-          END IF
-   40 CONTINUE
+              IF (I0.EQ.0.AND.LIST(NB1,J).NE.NTOT) THEN
+                  LIST(NB1+1,J) = NTOT
+                  LIST(1,J) = LIST(1,J) + 1
+              END IF
+   40     CONTINUE
+      END IF
 *
 *       Include optional kick velocity of 3*VRMS km/s after GR coalescence.
       IF (KZ(43).GT.0.AND.NBH2.EQ.2) THEN

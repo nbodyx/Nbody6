@@ -34,7 +34,7 @@
           IF (SEMI.GT.0.0) THEN
               ALPH = 0.0
               ZMM = ZMM + BODY(ICH)*BODY(J)
-*       Employ the stability criterion for dominant binary.
+*       Employ the stability criterion for dominant binary with ALPH = 0.
               NST = NSTAB(SEMIGR,SEMI,ECCGR,ECC,ALPH,BODYC(1),BODYC(2),
      &                                                        BODY(J))
               EB = EB - 0.5*BODY(ICH)*BODY(J)/SEMI

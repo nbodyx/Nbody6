@@ -1,0 +1,131 @@
+
+README_SSE
+Nov. 2015
+
+Here we document considerations relating to stellar and binary evolution 
+in NBODY6. This includes hard-wired parameter choices that you may wish 
+to review and possibly change before compilation. 
+
+Stellar evolution is implemented according to the SSE algorithm described 
+in Hurley, Pols & Tout (2000, MNRAS, 315, 543) with some updates. 
+Binary evolution is implemented along the lines of the BSE algorithm 
+described in Hurley, Tout & Pols (2002, MNRAS, 329, 897), as well as the 
+earlier Tout et al. (1997, MNRAS, 291, 732). Some routines and processes 
+from BSE have been adapted for their use in NBODY6 owing to additional 
+considerations when perturbations, KS binaries, etc. are involved. 
+The paper by Hurley et al. (2001, MNRAS, 323, 630) described the 
+implementation in the N-body code (NBODY4 at the time). 
+
+Subroutines directly associated with SSE are: 
+
+corerd.f
+hrdiag.f
+mlwind.f 
+mrenv.f 
+star.f
+trdot.f
+zcnsts.f
+zdata.h
+zfuncs.f
+
+Subroutines associated with BSE are:
+
+dgcore.f
+comenv.f
+gntage.f
+kick.f  - heavily modified compared to BSE 
+mix.f - with some NBODY6 additions
+roche.f - analogous to evolv2 of BSE 
+
+and the following are NBODY6 routines involving SSE/BSE: 
+
+binpop.f - setup of initial binary parameters 
+expel.f - calls comenv for non-roche cases (also expel2.f)
+hrplot.f - creates output files for plotting HR-diagrams 
+imf2.f - sets the initial masses 
+instar.f - stellar evolution initialisation 
+mdot.f - controls the updating of stellar evolution and 
+         determines if roche needs to be called 
+trflow.f - determines the time until roche for a binary. 
+
+Parameters in the input file that are important to stellar evolution are 
+the metallicity ZMET and the time interval between hrplot calls DTPLOT. 
+Also see define.f for a full description of the lines read in by 
+data.f and binpop.f. You will also need to set: 
+
+KZ(8) >= 3 for binary evolution
+KZ(19) >= 3 for SSE stellar evolution
+KZ(12) > 1 for hrplot output
+KZ(20) = (various) for your IMF choice
+KZ(25) > 0 WD kicks
+
+(see define.f for explanations). 
+
+However, there are are a number of parameters that are set in the headers 
+of various files that you need to be aware of. These are listed below, 
+grouped by the subroutine they appear in. 
+
+comenv.f: 
+
+alpha  (3.0) - common-envelope efficiency parameter 
+lambda (0.0) - structure parameter for a giant envelope 
+               (you can set it as a constant or have it calculated)
+
+hrdiag.f: 
+
+ecflag (1) - determines if electron-capture supernovae are enabled
+wdflag (1) - choices for how the white dwarfs are cooled 
+nsflag (2) - choices for how NS/BH masses are calculated
+mch (1.44) - the Chandrasekhar mass (unlikely to change this, 
+             also set in comenv.f, mix.f, roche.f, star.f)
+mxns (2.5) - the maximum mass of a neutron star (actually mxns0, mxns1:
+             see also mix.f)
+
+kick.f: 
+(also see the header of the subroutine for more information)
+
+bhflag   (0) - decision making for including BH kicks
+disp (190.0) - the dispersion in a Maxwellian velocity distribution 
+               or the maximum value for a flat distribution (if -ve)
+ecsig (20.0) - dispersion for electron-capture SN (various choices)
+wdsig1 (2.0) - dispersion for He and CO WDs (if #25 > 0)
+wdsig2 (2.0) - dispersion for ONe WDs (if #25 < 0)
+wdkmax (6.0) - maximum WD kick velocity
+vfac   (0.0) - option to scale by VSTAR
+
+mlwind.f: 
+
+mdflag  (1) - sets the mass-loss prescription that will be used (see header) 
+neta  (0.5) - Reimers mass-loss coefficient for giant winds
+bwind (0.0) - companion-enhanced mass-loss factor
+flbv  (1.5) - coefficient for LBV wind rate if mdflag > 2
+
+roche.f: 
+
+acc2   (1.5) - Bondi-Hoyle wind accretion efficiency factor 
+beta (0.125) - wind velocity factor
+epsnov (0.0) - fraction of material accreted onto a WD ejected in a nova
+eddfac (1.0) - Eddington limit for accretion onto a degenerate object
+gamm1 (-1.0) - choices for angular momentum changes owing to RLOF mass-loss
+xi     (1.0) - factor to reduce spin angular momentum change owing to 
+                wind accretion. 
+
+Notes: 
+
+(1) Previously there was a cap on masses of 100 Msun. This has now been 
+    removed and instead we impose a minimum main-sequence lifetime for 
+    high-mass stars in the function tbgbf (see zfuncs.f). However, the 
+    routines remain unverified above 100 Msun so you use masses higher than 
+    this at your own peril. 
+
+(2) As well as the parameter choices there are different prescriptions 
+    within the code for various binary evolution cases, such as what to do 
+    when mass is accreted onto a remnant star, etc. 
+    If the particulars of binary evolution are important, i.e. will have a 
+    bearing on your goals for the simulation, then you should take some 
+    time to review the prescriptions, how the binaries are setup initially, 
+    and so on. 
+
+JRH 11/2015
+
+

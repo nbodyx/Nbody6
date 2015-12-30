@@ -48,7 +48,7 @@
           XDOT(K,ICOMP) = X0DOT(K,ICOMP)
           XDOT(K,JCOMP) = X0DOT(K,JCOMP)
           X0(K,NTOT) = X(K,NTOT)
-      X0(K,JCOMP) = X(K,JCOMP)
+          X0(K,JCOMP) = X(K,JCOMP)
    10 CONTINUE
 *
 *       Obtain force polynomial for c.m. with components ICOMP & JCOMP.
@@ -132,6 +132,7 @@
      &                     BODY(JCOMP)*FI(K,JCOMP))/BODY(ICM)
               D1(K,ICM) = (BODY(ICOMP)*D1(K,ICOMP) +
      &                     BODY(JCOMP)*D1(K,JCOMP))/BODY(ICM)
+              FIDOT(K,ICM) = D1(K,ICM)
               FIRR = FIRR + FI(K,ICM)**2
               FDIRR = FDIRR + D1(K,ICM)**2
   150     CONTINUE

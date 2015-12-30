@@ -23,24 +23,26 @@
 *       Skip hyperbolic orbit (i.e. kick for second binary component).
           IF (H(IPAIR).GT.0.0) GO TO 30
       ELSE
-*       Include small angle for moving away from pericentre.
-          THETA = 1.0
           IKICK = -1
           IPAIR = KSPAIR
-*       Increase angle near small pericentre.
           SEMI = -0.5D0*BODY(N+IPAIR)/H(IPAIR)
           ECC2 = (1.0 - R(IPAIR)/SEMI)**2 +
      &                          TDOT2(IPAIR)**2/(BODY(N+IPAIR)*SEMI)
           ECC = SQRT(ECC2)
-          IF (ECC.LT.1.0) THEN
-*             EFAC = SQRT((1.0 + ECC)/(1.0 - ECC))
-*             THETA = 2.0*ATAN(EFAC)
+*
+*       Increase angle near small pericentre (careful for SEMI < 0).
+          IF (ECC.LT.0.99) THEN
               TH = -ECC
               THETA = ACOS(TH)
+          ELSE IF (SEMI.GT.0.0) THEN
+              THETA = 3.0
+          ELSE
+              THETA = 1.0
           END IF
-          WRITE (6,66)  ECC, THETA, SEMI, SEMI*(1.0 - ECC), R(IPAIR),
-     &                  TDOT2(IPAIR)
-   66     FORMAT (' KSAPO    E THETA A PM R TD2 ',F10.6,F7.3,1P,4E10.2)
+*
+*         WRITE (6,5)  ECC, THETA, SEMI, SEMI*(1.0 - ECC), R(IPAIR),
+*    &                  TDOT2(IPAIR)
+*   5     FORMAT (' KSAPO    E THETA A PM R TD2 ',F10.6,F7.3,1P,4E10.2)
       END IF
 *
 *       Form transformation coefficients (Stiefel & Scheifele p. 85).
@@ -68,9 +70,8 @@
       END IF
 *
 *       Include diagnostic check that correct apocentre has been set.
-*     SEMI = -0.5D0*BODY(N+IPAIR)/H(IPAIR)
 *     WRITE (6,20)  SEMI, R(IPAIR), H(IPAIR), GAMMA(IPAIR)
-*  20 FORMAT (' APOCENTRE:    A RA H G ',1P,2E10.2,2E10.1)
+*  20 FORMAT (' APOCENTRE:    A RA H G ',1P,2E10.2,6E10.1)
 *
 *       Save KS parameters for WD or neutron star kick (routine FCORR).
    30 IF (IKICK.GT.0) THEN
