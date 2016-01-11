@@ -60,10 +60,10 @@
           END IF
 *
 *       Reduce irregular step if STEPR < STEP.
-   25 IF (STEPR(I).LT.STEP(I)) THEN
-          STEP(I) = 0.5D0*STEP(I)
-          GO TO 25
-      END IF
+   25     IF (STEPR(I).LT.STEP(I)) THEN
+              STEP(I) = 0.5D0*STEP(I)
+              GO TO 25
+          END IF
 *
 *       Initialize or update array for new block times.
           TNEW(I) = T0(I) + STEP(I)

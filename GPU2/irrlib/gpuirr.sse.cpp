@@ -273,6 +273,7 @@ struct NBlist{
 	}
 };
 
+static bool       is_open = false;
 static Particle  *ptcl = NULL;
 static Predictor *pred = NULL;
 // static std::vector<NBlist> list;
@@ -315,6 +316,11 @@ static void gpuirr_open(
 		const int nmax,
 		const int lmax)
 {
+	if(is_open){
+		fprintf(stderr, "gpuirr: it is already open\n");
+		return;
+	}
+
 	assert(lmax <= 1 + NBlist::NB_MAX);
 
 	fprintf(stderr, "**************************** \n"); 
@@ -352,9 +358,15 @@ static void gpuirr_open(
 	}
 	time_pred = time_pact =  time_grav = time_onep = time_push = time_sort = 0.0;
 	num_inter = num_fcall = num_steps = num_pred_all = num_pred_act = 0;
+
+	is_open = true;
 }
 
 static void gpuirr_close(){
+	if(!is_open){
+		fprintf(stderr, "gpuirr: it is already close\n");
+		return;
+	}
 #if 0
 	cudaFreeHost(ptcl); ptcl = NULL;
 	cudaFreeHost(pred); pred = NULL;
@@ -388,6 +400,8 @@ static void gpuirr_close(){
 	fprintf(stderr, "perf pact  : %f nsec\n", nsec_pred_act);
 	fprintf(stderr, "<#NB>      : %f \n",     nnb_avr);
 	fprintf(stderr, "**************************** \n"); 
+
+	is_open = false;
 }
 
 static void gpuirr_set_jp(

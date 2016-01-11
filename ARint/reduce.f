@@ -197,7 +197,7 @@
               IF (ZI.GT.0.0) THEN
                   DO 107 K = 1,3
                       XX(K,3) = X(K,JM) - X(K,ICH)
-                      VV(K,3) = X(K,JM) - X(K,ICH)
+                      VV(K,3) = XDOT(K,JM) - XDOT(K,ICH)
   107             CONTINUE
                   CALL INCLIN(XX,VV,XCM,VCM,ALPH)
                   ZI = 360.0*ALPH/TWOPI
@@ -216,16 +216,9 @@
           CALL BHSTAT
       END IF
 *
-*       Define discrete time for new polynomials.
+*       Define discrete time for polynomials (new attempt 12/2015).
       TIME0 = TIME
-*     TIME = T0S(ISUB) + TIMEC
       TIME = TBLOCK
-*     TT = T0S(ISUB) + TIMEC
-*     WRITE (6,110)  TIME, TT, TBLOCK, TT-TBLOCK, TBLOCK-TPREV
-* 110 FORMAT (' TIME   T TT TB TT-TB TB-TP  ',3F11.5,1P,3E10.2)
-*       Re-define initial epoch for consistency (ignore phase error).
-***   T0S(ISUB) = TIME - TIMEC
-*       NB!!! This looks risky - hence suppress!!
 *
 *       Check whether to treat two singles instead of KS (case of JESC > 0).
       IF (JESC.GT.0) THEN
@@ -233,12 +226,13 @@
 *       Apply perturbation limit of 10 % for new KS (otherwise two singles).
           RCR = (0.1*ZMB/MASS)**0.3333*RSUM
           IB = 1
-          IF (IESC.NE.INAME(1)) IB = NCH - 1
+          IF (IESC.NE.INAME(1).OR.1.0/RINV(NCH-1).LT.RCR) IB = NCH - 1
+          IF (1.0/RINV(1).LT.1.0/RINV(NCH-1)) IB = 1   ! Ensure the smallest.
           RB = 1.0/RINV(IB)
           IF (RB.GT.RMIN.OR.RB.GT.RCR) THEN
               ISING = 1
 *       Switch to KS for small pericentre.
-          IF (SEMIX*(1.0 - ECC).LT.0.1*RMIN) ISING = 0
+              IF (SEMIX*(1.0 - ECC).LT.0.1*RMIN) ISING = 0
           END IF
       ELSE
           ISING = 0

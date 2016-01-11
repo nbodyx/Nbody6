@@ -285,6 +285,7 @@
 *      46  Reserved for data analysis project on NBODY6++.
 *      47  Reserved for data analysis project on NBODY6++.
 *      48  Three-body stability criterion (>0: Valtonen; >1: QST failure).
+*      48  Three-body stability comparison (Valtonen & Mardling 2008 fort.88).
 *      49  Post-Newtonian perturbations included in KS (dir Block).
 *      50  Free.
 *       ---------------------------------------------------------------------

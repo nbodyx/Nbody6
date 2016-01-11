@@ -21,7 +21,8 @@
 *
 *
 *       Determine closest approaching perturber (JCLOSE for ABSORB).
-      RX = 1.0
+      ITER = 0
+    1 RX = 1.0
       JCLOSE = 0
       NP = LISTC(1)
       DO 10 L = 2,NP+1
@@ -35,7 +36,8 @@
               DO 6 K = 1,3
                   RD = RD + (X(K,J)-X(K,ICH))*(XDOT(K,J)-XDOT(K,ICH))
     6         CONTINUE
-              IF (RD.LT.0.0) THEN
+*       Ignore radial velocity for strong perturber.
+              IF (RD.LT.0.0.OR.GPERT.GT.0.1) THEN
                   JCLOSE = J
                   RX = RIJ2
               END IF
@@ -43,12 +45,12 @@
    10 CONTINUE
 *
 *       Impose realistic distance limit (closest perturber may be receding).
-      IF (JCLOSE.EQ.0.OR.(RX.GT.9.0*RMIN22.AND.GPERT.LT.0.2)) GO TO 50
-      IF (RX.GT.100.0*RMIN2.OR.JCLOSE.GT.N) GO TO 50
+      IF (JCLOSE.EQ.0.OR.(RX.GT.9.0*RMIN22.AND.GPERT.LT.0.1)) GO TO 50
+      IF ((RX.GT.625.0*RMIN2.AND.GPERT.LT.0.2).OR.JCLOSE.GT.N) GO TO 50
       WRITE (6,20)  TIME+TOFF, NSTEP1, NN, NPERT, NAME(JCLOSE),
-     &              SQRT(RX), GPERT, 1.0/RINV(1)
-   20 FORMAT (/,' CHAIN INJECT    T # NN NP NM RX GP RB ',
-     &                            F9.3,I6,2I4,I8,1P,3E10.2)
+     &              BODY(JCLOSE)/BODY(ICH), SQRT(RX), GPERT, 1.0/RINV(1)
+   20 FORMAT (/,' CHAIN INJECT    T # NN NP NM MJ/MI RX GP RB ',
+     &                            F9.3,I6,2I4,I8,F7.3,1P,3E10.2)
 *
 *     NNB = LISTC(1) + 2
 *     LISTC(NNB) = ICH
@@ -59,11 +61,11 @@
 *  30 CONTINUE
 *
 *       Increase chain membership in the usual way.
-      MASS = MASS + BODY(JCLOSE)
       CALL ABSORB(ISUB)
 *
-*       Update perturber list.
-      CALL CHLIST(ICH)
+*       Repeat search once for significant new perturbation.
+      ITER = ITER + 1
+*     IF (GPERT.GT.0.05.AND.ITER.LT.2) GO TO 1
 *
    50 RETURN
 *

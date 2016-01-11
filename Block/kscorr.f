@@ -10,9 +10,9 @@
       SAVE SLOW
       REAL*8  SLOW(8)
       DATA SLOW /1.0D0,2.0D0,4.0D0,8.0D0,16.0D0,32.0D0,64.0D0,128.0D0/
-      REAL*8  UI(4),UIDOT(4),FP(6),FD(6),FREG(4),FRD(4),A1(3,4),A(8),
-     &        U4(4),U5(4)
-      REAL*8  XI(6),VI(6),RDOT(3)
+      REAL*8  UI(4),UIDOT(4),FP(6),FD(6)
+      REAL*8  FREG(4),FRD(4),A1(3,4),A(8),U4(4),U5(4)
+      REAL*8  VI(6),RDOT(3)
 *
 *
 *       Convert from physical to regularized derivative using T' = R.
@@ -44,7 +44,6 @@
 *       Activate perturbation evaluation after one iteration above 1D-04.
       ITP = 0
       IF (GAMMA(IPAIR).GT.1.0D-04) ITP = 1
-*
 *       Perform one iteration without re-evaluating perturbations.
       DO 30 ITER = 1,2
 *

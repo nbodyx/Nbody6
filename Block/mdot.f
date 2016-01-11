@@ -992,6 +992,14 @@
                DO 50 L = 2,NNB2
                   J = ILIST(L)
                   IF (L.EQ.NNB2) J = I
+                  IF (KW.EQ.15.AND.LIST(1,J).EQ.1) THEN  ! Jarrod fix 12/15.
+                     JJ = LIST(2,J)
+                     IF (BODY(JJ).EQ.0.D0) THEN
+                        LIST(1,J) = 2
+                        LIST(3,J) = N
+                        IF (J.EQ.N.OR.JJ.EQ.N) LIST(3,J) = N - 1
+                     END IF
+                  END IF
 *                 CALL DTCHCK(TIME,STEP(J),DTK(MAXBLK)) ! no effect (08/10).
                   DO 45 KK = 1,3
                      X0DOT(KK,J) = XDOT(KK,J)

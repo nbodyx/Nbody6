@@ -1,6 +1,6 @@
 #avx       = enable
-#chainmode = archain
-#ksblock   = on
+chainmode = archain
+ksblock   = on
 
 ifeq ($(avx), enable)
 MKOPTIONS += avx=enable
@@ -47,7 +47,7 @@ NVCC += -Xcompiler "-O3 -Wall -fopenmp -mavx"
 else
 NVCC += -Xcompiler "-O3 -Wall -fopenmp"
 endif
-#NVCC += -DWITH_CUDA5
+NVCC += -DWITH_CUDA5
 
 RUNDIR = ./run
 

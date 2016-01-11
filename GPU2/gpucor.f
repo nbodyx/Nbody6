@@ -174,6 +174,7 @@
           DO 28 L = 1,NNB0
               JJLIST(L) = LIST(L+1,I)
    28     CONTINUE
+*       Accumulate tidal energy change for general galactic potential.
           IF (KZ(14).EQ.3) THEN
               ETIDE = ETIDE + BODY(I)*(0.5*W2DOT*DTR - WDOT)*DTR
           END IF
@@ -649,11 +650,27 @@
 *         END IF
 *     END IF
 *
-*     IF (DT0.LT.0.01*STEPR(I)) THEN
+*     IF (DT0.LT.0.05*STEPR(I)) THEN
 *     WRITE (6,120)  NAME(I),NBGAIN,NBLOSS,NNB,TIME,STEPR(I),DT0
 * 120 FORMAT (' SHRINK!    NBG NBL NB T SR DT0  ',
 *    &                     4I6,F8.3,1P,6E10.2)
+*     CALL FLUSH(6)
 *     END IF
+*
+*       Employ Makino time-step procedure for small regular step (rare case).
+      IF (DT0.LT.0.01*TTMP) THEN
+          DV2 = 0.0
+          VI2 = 0.0
+          DO 100 K = 1,3
+              DV2 = DV2 + (XIDOT(K) - X0DOT(K,I))**2
+              VI2 = VI2 + XIDOT(K)**2
+  100     CONTINUE
+*       Reduce both time-steps on 10 % change in corrected velocity.
+          IF (DV2.GT.0.01*VI2) THEN
+              STEP(I) = STEP(I)/8.0D0
+              STEPR(I) = 0.5*STEPR(I)
+          END IF
+      END IF
 *
 *       Set new regular step and reduce irregular step if STEPR < STEP.
       STEPR(I) = TTMP

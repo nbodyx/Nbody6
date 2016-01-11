@@ -89,7 +89,7 @@
 *       Sum each perturber contribution over the chain components.
       IM1 = 0
       DO 70 LL = 2,NPC
-          KDUM = 0       ! this deals with two binary perturbers (8/14).
+          KDUM = 0
           K = LISTC(LL)
           A1 = X(1,K) - XI(1)
           A2 = X(2,K) - XI(2)

@@ -21,8 +21,8 @@
       COMMON/INCOND/  X4(3,NMX),XDOT4(3,NMX)
       INTEGER  ISORT(NMX)
       REAL*8  XCM(3),VCM(3),XJ(3),VJ(3)
-      SAVE IT,IWARN
-      DATA IT,IWARN /0,0/
+      SAVE IT,IWARN,NAMESC,NAMESC2
+      DATA IT,IWARN,NAMESC,NAMESC2 /0,0,0,0/
 *
 *
       IESC = 0
@@ -417,7 +417,7 @@
           ZMB = BODYC(IESC) + BODYC(JESC)
           ZMB2 = BODYC(J1) + BODYC(J2)
 *       Retain the most massive binary for AR_Chain case.
-          IF (ZMB.GT.ZMB2) THEN
+          IF (ZMB.GT.10.0*ZMB2) THEN       ! Factor 10 included 1/16.
               IESC = J1
               JESC = J2
               IBIN = NN - IBIN
@@ -455,25 +455,27 @@
 *
 *       Skip on JESC > 0 not at beginning/end but check large chain.
       IF (JESC.GT.0.AND.(JESC.NE.1.AND.JESC.NE.NCH)) KCASE = 0
-      IF (JESC.GT.0.AND.RSUM.GT.25.0*RMIN) KCASE = 2
+      IF (JESC.GT.0.AND.RSUM.GT.10.0*RMIN) KCASE = 2
 *
 *       Skip if no identified case (should be rare).
       IF (KCASE.EQ.0) GO TO 60
 *
 *       Ensure enforced escape of binary in wide four-body system.
       IF (KCASE.EQ.2.AND.NCH.EQ.4.AND.1.0/RINV(2).GT.10.0*RMIN) THEN
-          WRITE (6,11)  NSTEP1, IESC, JESC, NPERT, NAMEC(IESC),
-     &                  NAMEC(JESC), 1.0/RINV(IBIN), 1.0/RINV(2)
-   11     FORMAT (' ENFORCED ESCAPE    # IESC JESC NP NAM RB R2 ',
-     &                                 I6,3I4,2I7,1P,2E10.2)
-          KCASE = 1
+          IF (NAMEC(IESC).NE.NAMESC) THEN
+              WRITE (6,11)  NSTEP1, IESC, JESC, NPERT, NAMEC(IESC),
+     &                      NAMEC(JESC), 1.0/RINV(IBIN), 1.0/RINV(2)
+   11         FORMAT (' ENFORCED ESCAPE    # IESC JESC NP NAM RB R2 ',
+     &                                     I6,3I4,2I7,1P,2E10.2)
+              NAMESC = NAMEC(IESC)
+          END IF
           RI = 1.0/RINV(2)
 *       Mark the smallest (last) binary for removal even if IESC/JESC = 1/2.
           IF (IESC+JESC.EQ.3.AND.1.0/RINV(3).LT.1.0/RINV(1)) THEN
               IESC = 3
               JESC = 4
           END IF
-          GO TO 40
+          GO TO  60    ! attempt Dec 2015.
       END IF
 *
 *       Enforce escape for distant member with positive radial velocity.
@@ -500,7 +502,7 @@
 *
 *       Switch to possible non-dominant mass binary.
       ZMB = BODYC(IESC) + BODYC(JESC)
-      IF (ZMB.GT.0.5*MASS) THEN
+      IF (ZMB.GT.0.9*MASS) THEN         ! Factor 0.5 changed to 0.9 (1/16).
           IF (IESC.EQ.INAME(1)) THEN
               IESC = INAME(NN-1)
               JESC = INAME(NN)
@@ -651,6 +653,7 @@
 *       Enforce termination (KCASE < 0) if NCH <= 4 (final membership <= 2).
               IF (NCH.LE.4) THEN
                   KCASE = -1
+                  KCASE = 2     ! Escape of binary enforced via REDUCE.
                   GO TO 40
               END IF
               CM(9) = CM(9) - EB
@@ -980,11 +983,14 @@
               GO TO 60
           END IF
           IF (KZ(30).GT.1.OR.VINF.GT.2.0) THEN
+              IF (NAMEC(IESC).NE.NAMESC2) THEN
               WRITE (6,36)  IESC, NAMEC(IESC), RI, RDOT**2,
      &                      2.0*BODY(ICH)/RI, VINF, GPERT
    36         FORMAT (' CHAIN ESCAPE:    IESC NM RI RDOT2 2*M/R VF GP ',
      &                                   I3,I6,1P,3E9.1,0P,F6.1,1P,E9.1)
+              NAMESC2 = NAMEC(IESC)
               CALL FLUSH(6)
+              END IF
           END IF
 *       Ensure single body is removed in case of wide binary.
           JESC = 0
@@ -995,8 +1001,8 @@
 *
 *       Reduce chain membership (NCH > 3) or specify termination.
    40 IF (NCH.GE.3) THEN
-          IF (RI.GT.3.0*RMIN) GO TO 99
-          IF (VINF.GT.0.0.AND.RI.GT.5.0*RMIN.AND.RDOT.GT.0.0) GO TO 99
+          IF (RI.GT.3.0*RMIN) GO TO 60
+          IF (VINF.GT.0.0.AND.RI.GT.5.0*RMIN.AND.RDOT.GT.0.0) GO TO 60
 *       Subtract largest chain distance from system size (also binary).
 *         IM = ISORT(1)
 *         RSUM = RSUM - 1.0/RINV(IM) - RB
@@ -1035,10 +1041,10 @@
                   GO TO 60
               END IF
               RP = SQRT(RP2)
-              WRITE (6,46) NSTEP1, NCH, NAMEC(IESC), RI, RX,GPERT,GX,
-     &                     RP, RDOT
-   46         FORMAT (' REDUCE!   # NCH NMC RI RX GP GX RP RD ',
-     &                            I8,I4,I6,1P,2E10.2,4E9.1)
+              WRITE (6,46) NSTEP1, KCASE, NCH, NAMEC(IESC), RI, RX,
+     &                     GPERT, GX, RP, RDOT
+   46         FORMAT (' REDUCE!   # KCASE NCH NMC RI RX GP GX RP RD ',
+     &                            I8,2I4,I6,1P,2E10.2,4E9.1)
           END IF
 *
           IF (JESC.GT.0) THEN

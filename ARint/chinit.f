@@ -134,6 +134,7 @@
 *       Set global index of c.m. body and save name (SUBSYS sets NAME = 0).
       IF (TIMEC.GT.0.0D0) ICH0 = ICH
       ICH = JLIST(1)
+      ICH = JLIST(LX)
       NAME0 = NAME(ICH)
 *
 *       Define subsystem indicator (ISYS = 1,2,3,4 for triple, quad, chain).

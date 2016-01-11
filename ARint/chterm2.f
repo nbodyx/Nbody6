@@ -112,9 +112,9 @@
 *         WRITE (6,33)  ICOMP, JCOMP, ICH, JCMAX, STEP(JCMAX), RIJ
 *  33     FORMAT (' CHAIN FPOLY INIT   IC JC ICH JCX SI RIJ ',
 *    &                                 4I6,1P,2E10.2)
-          I = JCMAX             ! Copied from REDUCE.
+          I = JCMAX             ! Copied from REDUCE (only if NN > 2).
 *       Initialize single body #I different from ICOMP/JCOMP with small STEP.
-          IF (STEP(I).LT.1.0D-04.AND.I.LE.N) THEN
+          IF (NN.GT.2.AND.STEP(I).LT.1.0D-04.AND.I.LE.N) THEN
               IF (I.NE.ICOMP.AND.I.NE.JCOMP) THEN
                   RS0 = RS(I)
                   CALL NBLIST(I,RS0)
@@ -225,6 +225,7 @@
               T0(I) = TIME + DTADJ
           END IF
    60 CONTINUE
+      IPHASE = -1
 *
       RETURN
 *

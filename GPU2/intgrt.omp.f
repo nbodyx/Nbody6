@@ -258,8 +258,8 @@
           WRITE (6,24)  I, NAME(I), NXTLEN, NSTEPR, STEP(I), STEPR(I)
    24     FORMAT (' SMALL STEP!!    I NAME LEN #R SI SR ',
      &                              3I6,I11,1P,2E10.2)
-      WRITE (6,1800)  TIME, T0R(I)+STEPR(I)
- 1800 FORMAT (' CHECK!!   T T0R+SR  ',2F14.6)
+          WRITE (6,1800)  TIME, T0R(I)+STEPR(I)
+ 1800     FORMAT (' CHECK!!   T T0R+SR  ',2F14.6)
           STOP
       END IF
 *

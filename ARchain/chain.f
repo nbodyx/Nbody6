@@ -82,7 +82,7 @@
       END DO
       spin(1) = 0.0
       spin(2) = 0.0
-*     spin(3) = 0.999
+      spin(3) = 0.999
       ISPIN = 1
       JGR = 0
       IBH = 0
@@ -114,7 +114,7 @@
       ESUB = 0.0
       ECOLL1 = 0.0
       IMOVE = 0
-      NEXT = 10
+      NEXT = 0
 *
 *       Prepare next step initially or after membership change.
    30 CONTINUE
@@ -271,14 +271,15 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
 *
 *       Activate indicator for absorber check (only two more members).
       IF (GPERT.GT.0.01.AND.N.LT.4.AND.NSTEP1.GT.NEXT) INJ = -1
-      IF (GPERT.GT.0.1.AND.N.LT.5.AND.NSTEP1.GT.NEXT-10) INJ = -1
+      IF (GPERT.GT.0.05.AND.N.LT.5.AND.NSTEP1.GT.NEXT-3) INJ = -1
+      INJ = 10
 *       Check indicator for membership injection (but avoid repeats).
       IF (INJ.LT.0) THEN
           N0 = N
           CALL INJECT(ISUB)
           INJ = 0
           IBH = -1
-          IF (N.GT.N0) NEXT = NSTEP1 + 30
+          IF (N.GT.N0) NEXT = NSTEP1 + 5
           IF (N.GT.N0) GO TO 30
       END IF
 *
@@ -916,7 +917,8 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
 *
           RM = 1.0/RINV(1)
           IF (N.GT.2) RM = MIN(1.0/RINV(1),1.0/RINV(N-1))
-          RGRAV = MIN(RGRAV,RM)
+*       Employ a temporary termination test for N = 2.
+          IF (N.EQ.2.AND.IPN.EQ.0.AND.GPERT.LT.3.0D-03) GO TO 250
 *
 *       Check hierarchical stability condition for triple or quad.
       IF (N.EQ.3.AND.MOD(NSTEP1,100).EQ.0) THEN
@@ -989,17 +991,27 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
      &    (IPN.GE.2.AND.RX.GT.XFAC*SX)) THEN
 *
           CALL CHMOD(ISUB,KCASE,IESC,JESC)
+           IF (KCASE.EQ.1.AND.ENERGY.GT.-0.000010) THEN
+               IESC = 0
+               JESC = 0
+               ITERM = -1
+               GO TO 258
+           END IF
 *      Continue chain integration up to perturbation and distance limit.
-          IF (KCASE.GT.0.AND.GPERT.LT.1.0D-03.AND.
-     &        RSUM.LT.100.0*RGRAV) THEN      ! Controls decision-making.
+          IF ((KCASE.EQ.1.AND.GPERT.LT.1.0D-03.AND.
+     &        RSUM.LT.5.0*RGRAV).OR.               ! Decision-making control.
+     &        (KCASE.EQ.0.AND.IESC.GT.0.AND.ENERGY.LT.0.0)) THEN
               KCASE = 0
               IESC = 0
               GO TO 30
           END IF
-          IF (IESC.GT.0.AND.N.GT.3.AND.GPERT.GT.1.0D-03) THEN
+          IF ((KCASE.GT.0.AND.IESC.GT.0.AND.N.GT.3.AND.
+     &        GPERT.GT.1.0D-03).OR.
+     &        (KCASE.LE.2.AND.RSUM.GT.3.0*RGRAV)) THEN
               CALL REDUCE(IESC,JESC,ISUB)
               IESC = 0
               JESC = 0
+              IF (N.EQ.2) GO TO 258
               GO TO 30
           END IF
       END IF
@@ -1026,13 +1038,16 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
       IF (GPERT.GT.0.10) NEXT = NSTEP1
 *       Include termination condition for N = 2 or large perturbation.
       IF ((N.EQ.2.AND.DW.LT.1.0D-03.AND.GPERT.LT.1.0D-07).OR.
-     &    (N.GT.2.AND.GPERT.GT.1.0).OR.
-     &    (ENERGY.GT.0.0.AND.RSUM.GT.10.0*RM.AND.NSTEP1.GT.20)) THEN
-          WRITE (6,190)  NSTEP1, IPN, DW, GPERT, SEMI, RSUM, RM, ENERGY
-  190     FORMAT (' QUIT CHAIN    # IPN DW GP A RSUM RM ENER ',
+     &    (N.GT.2.AND.GPERT.GT.0.2).OR.
+     &    (ENERGY.GT.0.0.AND.(RSUM.GT.3.0*RGRAV.OR.GPERT.GT.0.003).AND.
+     &    NSTEP1.GT.10)) THEN
+          WRITE (6,190)  NSTEP1, IPN, DW, GPERT, SEMI, RSUM, RGRAV,
+     &                   ENERGY
+  190     FORMAT (' QUIT CHAIN    # IPN DW GP A RSUM RG ENER ',
      &                            I6,I4,1P,5E10.2,0P,F10.6)
+*       Note possibility of large perturbation going from 4 to 3 to 2.
           ITERM = -1
-          GO TO 258 
+          GO TO 258
       END IF
 *
 *       Decide between increased membership, escape removal or termination.
@@ -1091,35 +1106,31 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
           GO TO 290
       ELSE
 *
-*       Determine most distant member for removal (binary may be central).
-          RX = 0.0
-          LK = 0
-          DO 275 L = 1,N
-              RI2 = 0.0
-              DO 270 K = 1,3
-                  RI2 = RI2 + X(K+LK)**2
-  270         CONTINUE
-              IF (RI2.GT.RX) THEN
-                  RX = RI2
-                  LX = L
-              END IF
-              LK = LK + 3
-  275     CONTINUE
-          RX = SQRT(RX)
+*       Determine most distant member for removal (R2 allows N > 3).
+          R1 = 1.0/RINV(1)
+          R2 = 1.0/RINV(N-1)
+*       Check beginning and end of the chain.
+          IF (R1.LT.R2) THEN
+              IESC = INAME(N)
+          ELSE
+              IESC = INAME(1)
+          END IF
+          RX = MAX(R1,R2)
 *
 *       Adopt 5*RGRAV as criterion to identify IESC since RMIN not available.
-          IF (IESC+JESC.EQ.0.AND.
-     &       (RX.GT.5.0*RGRAV.OR.ITERM.LT.0)) IESC = LX
-*
-*       Delay termination for small external perturbation (< 10000 steps).
-          IF (IESC.GT.0.AND.GPERT.LT.1.0D-04) THEN
+          IF (RX.GT.5.0*RGRAV.AND.GPERT.LT.1.0D-04) THEN
               XF = 10.0
+*       Delay termination for small external perturbation (< 10000 steps).
               IF (GPERT.LT.1.0D-07) XF = 20.0
 *       Note that stability condition requires termination (ITERM < 0).
               IF (RX.LT.XF*RGRAV.AND.NSTEP1.LT.9999.AND.ITERM.EQ.0) THEN
                   IESC = 0
                   JESC = 0
               END IF
+*       Limit termination to negative energy.
+          ELSE IF ((RX.LT.5.0*RGRAV.AND.ENERGY.LT.-0.000010).OR.
+     &        (GPERT.LT.1.0D-04.AND.ENERGY.LT.-0.000010)) THEN
+              IF (ITERM.GE.0) IESC = 0
           END IF
 *
 *       Check single versus binary escape in four-body case.
@@ -1135,7 +1146,6 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
                   JESC = 4
               END IF
           END IF
-*
 *       Remove body #IESC > 0 using the standard procedure (repeat for N > 2).
           IF (IESC.GT.0) CALL REDUCE(IESC,JESC,ISUB)
           IF (N.GE.2) THEN
@@ -1150,11 +1160,12 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
                   GO TO 30
               END IF
           END IF
-*       Terminate chain for two last members and exit after setting IGR = 0.
-          CALL CHTERM2(NBH2)   ! may not be reached but no harm if N=2.
       END IF
+*       Terminate chain for two last members and exit after setting IGR = 0.
+      CALL CHTERM2(NBH2)   ! may not be reached but no harm if N=2.
   290 ISUB = -1
       IGR = 0
+      IF (N.EQ.0) GO TO 400
 *
 *       Save current global time for next CALL CHAIN.
   300 IF (ITERM.GE.0) TS(ISUB) = T0S(ISUB) + TIMEC

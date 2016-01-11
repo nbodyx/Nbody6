@@ -48,8 +48,9 @@
 *
 *       Increase membership of chain (JCLOSE: single body or KS pair).
       NCH0 = NCH
+      MASS = MASS + BODY(JCLOSE)
       CALL SETSYS
-      INAME(NCH) = NCH  ! what is this??
+      INAME(NCH) = NCH
 *
 *       Improve coordinates & velocities of c.m. body to order F3DOT.
       CALL XVPRED(ICH,-1)

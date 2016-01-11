@@ -257,9 +257,9 @@
 *
 *       Check diagnostics print option.
       IF (KZ(10).GE.3) THEN
-          WRITE (6,40)  IPAIR, TIME, H(IPAIR), RI, DTAU(IPAIR), GI,
+          WRITE (6,40)  NSTEPU, TIME, H(IPAIR), RI, DTAU(IPAIR), GI,
      &                  STEP(I1), IMOD, LIST(1,I1)
-   40     FORMAT (3X,'KS MOTION',I6,2F10.6,1P,4E10.2,0P,2I4)
+   40     FORMAT (3X,'KS MOTION',I10,2F10.6,1P,4E10.2,0P,2I4)
       END IF
 *
 *       Employ special termination criterion in merger case.
@@ -649,7 +649,7 @@
           CALL KSRECT(IPAIR)
       END IF
 *
-*       See whether a massive BH subsystem can be selected.
+*       See whether a massive subsystem can be selected for CHAIN.
   84  IF (NCH.EQ.0.AND.SEMI.LT.5.0*RMIN.AND.NAME(I).GT.0.AND.
      &    GI.GT.0.05) THEN
 *
@@ -659,10 +659,12 @@
           END IF
 *
           RCR2 = RMIN2*BODY(I)/BODYM
-          RCR2 = 4.0*MAX(4.0*RMIN2,RCR2)
+          RCR2 = 16.0*MAX(RMIN22,RCR2)
           NNB1 = LIST(1,I1) + 1
           RX2 = 1000.0
           JCLOSE = 0
+          JCMAX = 0
+          NCL = 0
           DO 85 L = 2,NNB1
               J = LIST(L,I1)
               RIJ2 = (X(1,I) - X(1,J))**2 + (X(2,I) - X(2,J))**2 +
@@ -670,23 +672,29 @@
               RD = (X(1,I)-X(1,J))*(XDOT(1,I)-XDOT(1,J)) +
      &             (X(2,I)-X(2,J))*(XDOT(2,I)-XDOT(2,J)) +
      &             (X(3,I)-X(3,J))*(XDOT(3,I)-XDOT(3,J))
-              IF ((RIJ2.LT.RCR2.AND.RD.LT.0.0).OR.JCLOSE.EQ.0) THEN
+              IF (RIJ2.LT.RCR2) THEN
                   IF (RIJ2.LT.RX2) THEN
-                      RX2 = RIJ2
-                      RRD = RD
-                      JCLOSE = J
-                      VIJ2 = (XDOT(1,I) - XDOT(1,J))**2 +
-     &                       (XDOT(2,I) - XDOT(2,J))**2 +
-     &                       (XDOT(3,I) - XDOT(3,J))**2
+*       Allow for second perturber using JCMAX procedure in SETSYS.
+                      NCL = NCL + 1
+                      IF (NCL.EQ.1) THEN
+                          RX2 = RIJ2
+                          RRD = RD
+                          JCLOSE = J
+                          VIJ2 = (XDOT(1,I) - XDOT(1,J))**2 +
+     &                           (XDOT(2,I) - XDOT(2,J))**2 +
+     &                           (XDOT(3,I) - XDOT(3,J))**2
+                      ELSE
+                          JCMAX = J    ! Note JCMAX > N is OK (see SETSYS).
+                      END IF
                   END IF
               END IF
    85     CONTINUE
 *
-*       Exclude zero or hierarchical pertueber.
+*       Exclude zero or hierarchical perturber.
           IF (JCLOSE.EQ.0) GO TO 88
           IF (NAME(JCLOSE).LE.0) GO TO 88
-*       Include delay time to avoid repeat events (give priority above 10 %).
-          IF (TTOT.GT.TIME_CH.OR.GI.GT.0.10) THEN
+*       Include delay time to avoid repeat events (DANGER: do not use GPERT).
+          IF (TTOT.GT.TIME_CH) THEN
 *       Skip chain selection if close perturber > 5*SEMI or impact > 5*SEMI.
               RX = SQRT(RX2)
               SEMI1 = 2.0/RX - VIJ2/(BODY(I) + BODY(JCLOSE))
@@ -706,15 +714,15 @@
 *             EBT = EB + ZMU*(0.5*(RRD/RX)**2-(BODY(I)+BODY(JCLOSE)/RX))
 *             IF (EBT.GT.5.0*EBH) GO TO 88
 *
-              WRITE (6,86)  TTOT, NAME(JCLOSE), LIST(1,I1), STEP(I),
-     &                      STEP(JCLOSE), SEMI, RX, GI
-   86         FORMAT (' NEW CHAIN   T NMJ NP STEPI STEPJ A RIJ GI ',
-     &                              F9.3,I6,I4,1P,5E10.2)
-*       Set next new chain time to avoid collision candidate being absorbed.
-              TIME_CH = TTOT + 0.01
+              EORB = -0.5*BODY(I)*BODY(JCLOSE)/SEMI1
+              WRITE (6,86)  TTOT, NAME(JCLOSE), NCL, LIST(1,I1),
+     &                      STEP(JCLOSE), SEMI, RX, EORB, GI
+   86         FORMAT (' NEW CHAIN   T NMJ NCL NP STEPJ A RIJ EORB GI ',
+     &                              F9.3,I6,2I4,1P,5E10.2)
+*       Set next new chain time to avoid escaper being absorbed.
+              TIME_CH = TTOT + 0.001
 *       Initiate chain regularization directly (B-B or B-S: see IMPACT).
               JCOMP = JCLOSE
-              JCMAX = 0
               KSPAIR = IPAIR
               IPHASE = 8
               EBCH0 = EB
@@ -742,7 +750,7 @@
 *
 *       Check optional search criterion for multiple encounter or merger.
       IF (KZ(15).GT.0.AND.STEP(I).LT.DTMIN) THEN
-          CALL IMPACT(I,JPHASE)
+          IF (TTOT.GT.TIME_CH) CALL IMPACT(I,JPHASE)
       END IF
       GO TO 100
 *

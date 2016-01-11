@@ -75,7 +75,7 @@
       WDKMAX = 6.D0
       BHFLAG = 0
       BHFLAG = 2
-      DISP = 50.0
+      DISP = 20.0
 *
 *       Save orbital parameters in case of KS binary (called from KSAPO).
       IF (ICASE.EQ.0) THEN

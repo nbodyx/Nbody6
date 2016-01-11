@@ -10,7 +10,7 @@
 *
 *       Specify half regularized period (PI/2) or random phase (unperturbed).
       IF (IPAIR.GT.0) THEN
-          THETA = 0.25D0*TWOPI
+          THETA = 0.5*TWOPI
           IKICK = 0
       ELSE IF (IPAIR.LT.0) THEN
           THETA = 0.5*TWOPI*RAN2(IDUM1)
@@ -30,21 +30,23 @@
      &                          TDOT2(IPAIR)**2/(BODY(N+IPAIR)*SEMI)
           ECC = SQRT(ECC2)
 *
-*       Increase angle near small pericentre (careful for SEMI < 0).
+*       Increase angle near small pericentre (be careful for SEMI < 0).
           IF (ECC.LT.0.99) THEN
               TH = -ECC
               THETA = ACOS(TH)
           ELSE IF (SEMI.GT.0.0) THEN
-              THETA = 3.0
+              THETA = 0.5*TWOPI
           ELSE
               THETA = 1.0
           END IF
 *
 *         WRITE (6,5)  ECC, THETA, SEMI, SEMI*(1.0 - ECC), R(IPAIR),
-*    &                  TDOT2(IPAIR)
+*    &                 TDOT2(IPAIR)
 *   5     FORMAT (' KSAPO    E THETA A PM R TD2 ',F10.6,F7.3,1P,4E10.2)
       END IF
 *
+*       Use half the angle for KS to reach apocentre (bug fix 11/2015).
+      THETA = 0.5*THETA
 *       Form transformation coefficients (Stiefel & Scheifele p. 85).
       XC = COS(THETA)
       YS = SIN(THETA)
@@ -70,8 +72,8 @@
       END IF
 *
 *       Include diagnostic check that correct apocentre has been set.
-*     WRITE (6,20)  SEMI, R(IPAIR), H(IPAIR), GAMMA(IPAIR)
-*  20 FORMAT (' APOCENTRE:    A RA H G ',1P,2E10.2,6E10.1)
+*     WRITE (6,20)  SEMI, R(IPAIR), H(IPAIR), SEMI*(1.0 + ECC)
+*  20 FORMAT (' APOCENTRE:    A RA H APO ',1P,4E12.4,6E10.1)
 *
 *       Save KS parameters for WD or neutron star kick (routine FCORR).
    30 IF (IKICK.GT.0) THEN

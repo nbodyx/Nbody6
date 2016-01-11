@@ -10,6 +10,7 @@
      &                NAMEM(MMAX),NAMEG(MMAX),KSTARM(MMAX),IFLAGM(MMAX)
       COMMON/CLUMP/   BODYS(NCMAX,5),T0S(5),TS(5),STEPS(5),RMAXS(5),
      &                NAMES(NCMAX,5),ISYS(5)
+      COMMON/CONNECT/  TIME_CH
       CHARACTER*8  WHICH1
       REAL*8  XX(3,3),VV(3,3)
       INTEGER LISTQ(100)
@@ -285,7 +286,12 @@
 *
       WHICH1 = ' TRIPLE '
       IF (JCL.GT.N) WHICH1 = ' QUAD   '
-      IF (KCHAIN.GT.0) WHICH1 = ' CHAIN  '
+      IF (KCHAIN.GT.0) THEN
+*         IF (TTOT.LT.TIME_CH) GO TO 100
+          WHICH1 = ' CHAIN  '
+*       Set increased time for next CHAIN (here and in KSINT).
+          TIME_CH = TTOT + 0.001
+      END IF
 *
       IF (H(IPAIR).GT.0.0) THEN
           WRITE (6,18)  I, JCL, ECC, ECC1, SEMI1, RIJ, GAMMA(IPAIR)
@@ -393,7 +399,7 @@
 *       Save KS indices and delay initialization until end of block step.
       JCOMP = JCL
       CALL DELAY(JPHASE,-2)
-      CALL DELAY(1,KS2)
+      CALL DELAY(KCHAIN,KS2)     ! KCHAIN bug fix 12/2015.
       JCL = JCOMP
 *
 *       Prepare procedure for chain between hierarchy and single body (9/99).
@@ -560,7 +566,7 @@
 *
 *       Estimate relative perturbation at apocentre from actual value.
       GI = PERT*(SEMI1*(1.0 + ECC1)/RIJ)**3
-      IF (PERT.GT.GMAX.OR.GI.GT.0.02) GO TO 100
+      IF (PERT.GT.GMAX.OR.GI.GT.0.005) GO TO 100
 *
 *       Switch to direct integration for planetary systems if GI > 1D-04.
       IF (MIN(BODY(I1),BODY(I2)).LT.0.05*BODYM) THEN
@@ -913,6 +919,7 @@
 *       Copy pair index and set indicator for calling MERGE from MAIN.
       KSPAIR = IPAIR
       JPHASE = 6
+      IPHASE = JPHASE     ! just in case.
       JCOMP = JCL
       CALL DELAY(JPHASE,-2)
 *

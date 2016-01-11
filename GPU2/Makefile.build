@@ -1,5 +1,5 @@
 FC = gfortran -fPIC
-FFLAGS = -Wall -O3 -ffast-math 
+FFLAGS = -Wall -O3 -ffast-math
 #FFLAGS +=  -O3 -fbounds-check
 #FFLAGS = -g -O0
 #FFLAGS +=  -traceback
@@ -71,7 +71,8 @@ triple.f derqp3.f difsy3.f erel3.f extend.f qpmod3.f stabl3.f \
 stablz.f start3.f subsys.f tperi.f trans3.f \
 quad.f derqp4.f difsy4.f endreg.f erel4.f ichain.f newreg.f newsys.f \
 qpmod4.f rchain.f rsort.f stabl4.f start4.f status.f trans4.f \
-brake4.f ksrot.f expand2.f deform2.f circ.f spinup.f kstran.f qstab.f
+brake4.f ksrot.f expand2.f deform2.f circ.f spinup.f kstran.f qstab.f \
+newton.f kspert2.f pnpert2.f
 else
 #KS block-step version
 SOURCE = \
