@@ -991,6 +991,7 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
      &    (IPN.GE.2.AND.RX.GT.XFAC*SX)) THEN
 *
           CALL CHMOD(ISUB,KCASE,IESC,JESC)
+           IF (IESC.EQ.0.AND.JESC.EQ.0) GO TO 30
            IF (KCASE.EQ.1.AND.ENERGY.GT.-0.000010) THEN
                IESC = 0
                JESC = 0

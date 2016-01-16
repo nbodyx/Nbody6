@@ -1068,6 +1068,10 @@
 *       Set phase indicator < 0 to ensure new NLIST in routine INTGRT.
    50 IPHASE = -1
 *
-   60 RETURN
+   60 CONTINUE
+*       Ensure no action on zero indices (otherwise looping).
+      IF (IESC.EQ.0.AND.JESC.EQ.0) KCASE = 0
+*
+      RETURN
 *
       END

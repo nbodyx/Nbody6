@@ -10,6 +10,7 @@
      &                NAMEM(MMAX),NAMEG(MMAX),KSTARM(MMAX),IFLAGM(MMAX)
       COMMON/CLUMP/   BODYS(NCMAX,5),T0S(5),TS(5),STEPS(5),RMAXS(5),
      &                NAMES(NCMAX,5),ISYS(5)
+      COMMON/CONNECT/  TIME_CH
       CHARACTER*8  WHICH1
       REAL*8  XX(3,3),VV(3,3)
       INTEGER LISTQ(100)
@@ -308,7 +309,12 @@
 *
       WHICH1 = ' TRIPLE '
       IF (JCL.GT.N) WHICH1 = ' QUAD   '
-      IF (KCHAIN.GT.0) WHICH1 = ' CHAIN  '
+      IF (KCHAIN.GT.0) THEN
+          IF (TTOT.LT.TIME_CH) GO TO 100
+          WHICH1 = ' CHAIN  '
+*       Set increased time for next CHAIN (here and in KSINT).
+          TIME_CH = TTOT + 0.001
+      END IF
 *
       IF (H(IPAIR).GT.0.0) THEN
           WRITE (6,18)  I, JCL, ECC, ECC1, SEMI1, RIJ, GAMMA(IPAIR)

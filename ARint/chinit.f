@@ -116,6 +116,7 @@
      &                                        (X4(3,L) - X4(3,K))**2
               RSUM = RSUM + SQRT(RLK2)
     9     CONTINUE
+          RINV(L) = 1.0/SQRT(RLK2)
    10 CONTINUE
 *
 *       Reduce RSUM by geometrical factor and check upper limit from IMPACT.

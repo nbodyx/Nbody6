@@ -75,7 +75,7 @@
               IPHASE = 8
           END IF
 *       Copy index for SETSYS (JCLOSE > N suffices for B-B case).
-***       JCLOSE = JC0     !! JC0 serves no purpose now (12/2015).
+          JCLOSE = JCL0     ! Note JCLOSE may change in 2nd KSTERM (Jan/16).
       END IF
 *
    10 RETURN

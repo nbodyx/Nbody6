@@ -57,22 +57,33 @@
           IF (KZ(11).NE.0.AND.NCH.EQ.0) THEN   !  note absence of LIST(1,I1).
               IF (MIN(KSTAR(I1),KSTAR(I2)).GE.10) THEN
                   SEMI = -0.5*BODY(I)/H(IPAIR)
-                  RIJ2 = 0.0
-                  RD = 0.0
-                  J = LIST(2,I1)
-                  IF (JCLOSE.GT.0) J = JCLOSE
-                  IF (J-N.EQ.IPAIR) GO TO 100
-                  DO 220 K = 1,3
-                      RIJ2 = RIJ2 + (X(K,I) - X(K,J))**2
-                      RD = RD + (X(K,I)-X(K,J))*(XDOT(K,I)-XDOT(K,J))
-  220             CONTINUE
-                  RP = SQRT(RIJ2)
+                  NP = LIST(1,I1)
+                  FMAX = 0.0
+                  RDX = 0.0
+*      Determine closest perturber based on maximum force (usually NP = 1).
+                  DO 215 L = 2,NP+1
+                      J = LIST(L,I1)
+                      RIJ2 = 0.0
+                      RD = 0.0
+                      DO 210 K = 1,3
+                          RIJ2 = RIJ2 + (X(K,I) - X(K,J))**2
+                          RD = RD +(X(K,I)-X(K,J))*(XDOT(K,I)-XDOT(K,J))
+  210                 CONTINUE
+                      FJ = BODY(J)/RIJ2
+                      IF (FJ.GT.FMAX) THEN
+                          FMAX = FJ
+                          JCLOSE = J
+                          RX2 = RIJ2
+                          RDX = RD
+                      END IF
+  215             CONTINUE
+                  RP = SQRT(RX2)
 *       Skip outward motion or separation > 5*RMIN.
-                  IF (RD.GT.0.0.OR.RP.GT.5.0*RMIN) GO TO 100
-                  WRITE (6,222)  TIME+TOFF, JCLOSE, KSTAR(I1),
+                  IF (RDX.GE.0.0.OR.RP.GT.5.0*RMIN) GO TO 100
+                  WRITE (6,220)  TIME+TOFF, JCLOSE, KSTAR(I1),
      &                           KSTAR(I2), LIST(1,I1), GAMMA(IPAIR),
      &                           SEMI, R(IPAIR)
-  222             FORMAT (' ACTIVATE CHAIN    T JCL K* NP G A R ',
+  220             FORMAT (' ACTIVATE CHAIN    T JCL K* NP G A R ',
      &                                        F9.1,I7,3I4,1P,3E10.2)
                   KSPAIR = IPAIR
 *       Restore unperturbed motion from BRAKE4 (NP = 0 fixes some problem).
@@ -208,6 +219,7 @@
 *
 *       Set new regularized step and convert to physical time units.
       DTU = 4.0*ETAU*W2
+      IF (GI.GT.1.0D-02.AND.BODY(I).GT.10.0*BODYM) DTU = 0.5*DTU
 *
 *       Include convergence criterion DH = H'*DTU + H''*DTU**2/2 = 0.001*|H|.
       IF (GI.GT.1.0D-05) THEN

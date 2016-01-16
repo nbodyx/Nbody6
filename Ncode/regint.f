@@ -321,7 +321,7 @@
           END IF
       END IF
 *
-*       Obtain radial neighbour velocities *inside* half-mass radius.
+*       Obtain radial neighbour velocities *inside* half-mass radius (NB<=3).
       IF (NNB.LE.3.AND.RI2.LT.RH2) THEN
           A1 = 1.2*RS(I)
 *

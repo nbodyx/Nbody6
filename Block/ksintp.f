@@ -141,6 +141,7 @@
 *
 *       Set new regularized step and convert to physical time units.
       DTU = 4.0*ETAU*W2
+      IF (GI.GT.1.0D-02.AND.BODY(I).GT.10.0*BODYM) DTU = 0.5*DTU
 *
 *       Include convergence criterion DH = H'*DTU + H''*DTU**2/2 = 0.001*|H|.
       IF (GI.GT.1.0D-04) THEN
