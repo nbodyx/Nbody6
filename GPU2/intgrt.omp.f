@@ -144,10 +144,10 @@
           LOOP = .TRUE.
           TLISTQ = TIME
 *       Refresh chain perturber predictions and LISTC after each RETURN.
-          IF (NCH.GT.0) THEN
-              CALL XCPRED(2)
-              CALL CHLIST(ICH)
-          END IF
+*         IF (NCH.GT.0) THEN   ! Switched to routine CHAIN (02/16).
+*             CALL XCPRED(2)
+*             CALL CHLIST(ICH)
+*         END IF
       END IF
 *
 *       Reset control & regularization indicators.
@@ -282,6 +282,8 @@
           IF (MPDOT.GT.0.0D0.AND.TIME + TOFF.GT.TDELAY) THEN
               CALL PLPOT1(PHI1)
               MP = MP0/(1.0 + MPDOT*(TIME + TOFF - TDELAY))
+*       Adjust the tidal radius for strict correctness.
+              RTIDE = RTIDE0*((ZMASS + MP)/(1.0 + MP0))**0.3333
 *       Replace by exponential mass loss for faster decrease.
 *             DT = TIME + TOFF - TDELAY
 *             MP = MP0*EXP(-MPDOT*DT)
@@ -631,7 +633,7 @@
       IF (KZ(45).GT.0.AND.TBH.LT.TIME+TOFF) THEN
           CALL BHPLOT
 *       Update time interval (try 5 points per time unit).
-          TBH = TBH + 2.0D-01
+          TBH = TIME + TOFF + 2.0D-01
       END IF
 *
 *       Advance counters and check timer & optional COMMON save (NSUB = 0).

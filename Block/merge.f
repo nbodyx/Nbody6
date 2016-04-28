@@ -106,8 +106,8 @@
 *         STEP(J) = MAX(0.5D0*STEP(J),TIME - T0(J))
 *  20 CONTINUE
 *
-*       Delay saving KS variables in block version until end-point in KSTERM.
-      IF (TIME.GT.TBLOCK) THEN
+*       Save KS variables at end of block-step in case IPHASE.NE.6 in KSTERM.
+      IF (TIME.GE.TBLOCK) THEN
 *       Retain basic KS variables for explicit restart at merge termination.
           HM(IMERGE) = H(IPAIR)
           DO 25 K = 1,4

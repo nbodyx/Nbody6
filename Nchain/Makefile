@@ -1,6 +1,6 @@
 FFLAGS = -O2
 #FFLAGS = -g -fnonstd
-FORTRAN = f77
+FORTRAN = gfortran
 
 SOURCE = \
 absorb.f chfirr.f chfind.f chinit.f chlist.f chmod.f \

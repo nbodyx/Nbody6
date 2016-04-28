@@ -14,6 +14,7 @@
 *
 *       Obtain stellar parameters at current epoch (body #I may be ghost).
       KW = KSTAR(I)
+      kw0 = kw              ! Bug fix for undefined value (SJA 04/16).
       M0 = BODY0(I)*ZMBAR
       IF(M1.LE.0.0) M1 = RADIUS(I)*SU
       M10 = M1

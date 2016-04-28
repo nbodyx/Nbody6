@@ -21,8 +21,8 @@
       COMMON/INCOND/  X4(3,NMX),XDOT4(3,NMX)
       INTEGER  ISORT(NMX)
       REAL*8  XCM(3),VCM(3),XJ(3),VJ(3)
-      SAVE IT,IWARN,NAMESC,NAMESC2
-      DATA IT,IWARN,NAMESC,NAMESC2 /0,0,0,0/
+      SAVE IT,IWARN,NAMESC,NAMESC2,NAMESC3
+      DATA IT,IWARN,NAMESC,NAMESC2,NAMESC3 /5*0/
 *
 *
       IESC = 0
@@ -406,7 +406,7 @@
       END IF
 *
 *       Ensure massive binary is not removed (big single should be OK).
-      IF (KCASE.EQ.2) THEN
+      IF (KCASE.EQ.2.AND.NN.GT.4) THEN   ! Avoid problems with NN = 4.
           IF (IESC.EQ.INAME(1)) THEN
               J1 = INAME(NN-1)
               J2 = INAME(NN)
@@ -425,7 +425,7 @@
       END IF
 *
 *       Include escape check if middle distance is largest.
-      IF (KCASE.EQ.0.AND.NN.GE.7.AND.
+      IF (KCASE.EQ.0.AND.NN.GE.5.AND.
      &    1.0/RINV(ISORT(1)).GT.2.0*RMIN) THEN
           R1 = 1.0/RINV(1)
           RN = 1.0/RINV(NN-1)
@@ -462,12 +462,12 @@
 *
 *       Ensure enforced escape of binary in wide four-body system.
       IF (KCASE.EQ.2.AND.NCH.EQ.4.AND.1.0/RINV(2).GT.10.0*RMIN) THEN
-          IF (NAMEC(IESC).NE.NAMESC) THEN
+          IF (NAMEC(IESC).NE.NAMESC3) THEN
               WRITE (6,11)  NSTEP1, IESC, JESC, NPERT, NAMEC(IESC),
      &                      NAMEC(JESC), 1.0/RINV(IBIN), 1.0/RINV(2)
    11         FORMAT (' ENFORCED ESCAPE    # IESC JESC NP NAM RB R2 ',
      &                                     I6,3I4,2I7,1P,2E10.2)
-              NAMESC = NAMEC(IESC)
+              NAMESC3 = NAMEC(IESC)
           END IF
           RI = 1.0/RINV(2)
 *       Mark the smallest (last) binary for removal even if IESC/JESC = 1/2.
@@ -475,6 +475,7 @@
               IESC = 3
               JESC = 4
           END IF
+          KCASE = -3
           GO TO  60    ! attempt Dec 2015.
       END IF
 *
@@ -644,11 +645,16 @@
                   VINF = 0.0
               END IF
               IF (KZ(30).GT.1.OR.VINF.GT.1.0) THEN
+                  IF (NAMEC(IESC).NE.NAMESC) THEN
                   WRITE (6,18)  IESC, JESC, NAMEC(IESC), NAMEC(JESC),
      &                          RI, RDOT**2, 2.0*BODY(ICH)/RI, RB, VINF
    18             FORMAT (' CHAIN ESCAPE:    IESC JESC NM RI RDOT2 ',
      &                                      '2*M/R RB VINF ',
      &                                       2I3,2I6,1P,4E9.1,0P,F6.1)
+                      NAMESC = NAMEC(IESC)
+                  END IF
+                  KCASE = -3
+                  IF (VINF.GT.1.0) GO TO 60
               END IF
 *       Enforce termination (KCASE < 0) if NCH <= 4 (final membership <= 2).
               IF (NCH.LE.4) THEN
@@ -700,7 +706,8 @@
 *       Include safety termination (6/2014).
       IF (NN.EQ.3.AND.RI.GT.5.0*RMIN) THEN
           KCASE = 1
-          GO TO 40
+          HI = 0.5*RDOT**2 - BODY(ICH)/RI
+          IF (HI.GT.0.0) GO TO 60
       END IF
       IF (RI.GT.20.0*RMIN.AND.RDOT.GT.0.0) THEN
 *       Delay for BH and small perturbation (orbit may turn around).
@@ -988,12 +995,13 @@
      &                      2.0*BODY(ICH)/RI, VINF, GPERT
    36         FORMAT (' CHAIN ESCAPE:    IESC NM RI RDOT2 2*M/R VF GP ',
      &                                   I3,I6,1P,3E9.1,0P,F6.1,1P,E9.1)
-              NAMESC2 = NAMEC(IESC)
-              CALL FLUSH(6)
+                  NAMESC2 = NAMEC(IESC)
               END IF
-          END IF
 *       Ensure single body is removed in case of wide binary.
-          JESC = 0
+              JESC = 0
+              KCASE = -3
+              IF (VINF.GT.2.0) GO TO 60
+          END IF
       ELSE
           KCASE = 0
           GO TO 60
@@ -1001,8 +1009,12 @@
 *
 *       Reduce chain membership (NCH > 3) or specify termination.
    40 IF (NCH.GE.3) THEN
-          IF (RI.GT.3.0*RMIN) GO TO 60
-          IF (VINF.GT.0.0.AND.RI.GT.5.0*RMIN.AND.RDOT.GT.0.0) GO TO 60
+          IF (VINF.GT.0.0.AND.RDOT.GT.0.0) THEN
+              IF (GPERT.GT.0.05.AND.RI.GT.40.0*RMIN) THEN
+                  KCASE = -4
+                  GO TO 60
+              END IF
+          END IF
 *       Subtract largest chain distance from system size (also binary).
 *         IM = ISORT(1)
 *         RSUM = RSUM - 1.0/RINV(IM) - RB
@@ -1041,10 +1053,11 @@
                   GO TO 60
               END IF
               RP = SQRT(RP2)
-              WRITE (6,46) NSTEP1, KCASE, NCH, NAMEC(IESC), RI, RX,
-     &                     GPERT, GX, RP, RDOT
-   46         FORMAT (' REDUCE!   # KCASE NCH NMC RI RX GP GX RP RD ',
-     &                            I8,2I4,I6,1P,2E10.2,4E9.1)
+              IF (GPERT.GT.0.05.OR.RP.GT.40.0*RMIN) KCASE = -4
+*             WRITE (6,46) NSTEP1, KCASE, NCH, NAMEC(IESC), HI, RI,
+*    &                     GPERT, GX, RP, RDOT
+*  46         FORMAT (' REDUCE!   # KCASE NCH NMC HI RI GP GX RP RD ',
+*    &                            I8,2I4,I6,F8.3,1P,E10.2,4E9.1)
           END IF
 *
           IF (JESC.GT.0) THEN
@@ -1052,6 +1065,7 @@
    48         FORMAT (' BINARY!!!   NAM RB  ',2I6,1P,E10.2)
               WRITE (6,49)  NSTEP1, IESC, JESC, (1.0/RINV(KK),KK=1,NN-1)
    49         FORMAT (' # R  ',I8,2I4,1P,7E10.2)
+              KCASE = -3         ! Set condition for enforced termination.
           END IF
           IF (KZ(30).GT.1) THEN
               WRITE (6,55)  TIME+TOFF, NN, NAMEC(IESC), RI, RDOT
@@ -1071,6 +1085,17 @@
    60 CONTINUE
 *       Ensure no action on zero indices (otherwise looping).
       IF (IESC.EQ.0.AND.JESC.EQ.0) KCASE = 0
+*       Allow larger termination size for improved initialization.
+      IF (KCASE.EQ.-3) THEN
+          IF (GPERT.LT.1.0D-04.AND.RI.LT.10.0*RMIN) KCASE = 0
+          IF (GPERT.LT.1.0D-02.AND.RI.LT.5.0*RMIN) KCASE = 0
+*       Include safety limit to enforce termination.
+          IF (RI.GT.25.0*RMIN) KCASE = -3
+          IF (KCASE.NE.0) THEN
+              WRITE (6,70) NAMEC(IESC), GPERT, (1.0/RINV(K),K=1,NN-1)
+   70         FORMAT (' ACTUAL ESCAPE    NAM G R ',I6,1P,5E10.2)
+          END IF
+      END IF
 *
       RETURN
 *

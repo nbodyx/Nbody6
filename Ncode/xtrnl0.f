@@ -247,9 +247,10 @@
           READ (5,*)  MP, AP2, MPDOT, TDELAY
           WRITE (6,70)  MP, AP2, MPDOT, TDELAY
    70     FORMAT (/,12X,'PLUMMER POTENTIAL:    MP =',F7.3,'  AP =',F6.2,
-     &                        '  MPDOT =',F7.3,'  TDELAY =',F5.1)
+     &                        '  MPDOT =',F8.3,'  TDELAY =',F5.1)
           MP0 = MP
           AP2 = AP2**2
+          IF (KZ(14).EQ.3) RTIDE = RTIDE*(ZMASS + MP0)**0.3333
 *       Rescale velocities by including the Plummer & galactic virial energy.
           IF (ZKIN.GT.0.0D0) THEN
 *       Note that QVIR = Q is saved in routine SCALE and VIR < 0 with GPU.

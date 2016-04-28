@@ -50,8 +50,11 @@
     8     CONTINUE
 *       Check escape criterion for external fields or isolated system.
           EI = 0.5*VI2 - POTI
-          IF (KZ(14).EQ.4.OR.KZ(14).EQ.3) THEN
-              EI = EI - MP/SQRT(RI2 + AP2)
+*       Include optional Plummer mass in escape energy and potential.
+          IF (KZ(14).EQ.3.OR.KZ(14).EQ.4) THEN
+              EIPL = MP/SQRT(RI2 + AP2)
+              EI = EI - EIPL
+              POTI = POTI + EIPL
               IF (BODY(I).EQ.0.0D0) GO TO 30
           END IF
           IF ((KZ(14).GT.0.AND.KZ(14).NE.4).OR.EI.GT.0.0) GO TO 30
@@ -153,7 +156,7 @@
           ZK = ZK + HT
           RTIDE = (ZMASS/TIDAL(1))**0.3333
       ELSE IF (KZ(14).EQ.4.OR.KZ(14).EQ.3) THEN
-          RTIDE = RTIDE0*ZMASS**0.3333
+          RTIDE = RTIDE0*((ZMASS + MP)/(1.0 + MP0))**0.3333
       END IF
       EI = ZK - BODY(I)*POTI
 *

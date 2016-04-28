@@ -142,7 +142,7 @@
           END IF
 *
 *       Obtain the tidal perturbation (force and first derivative).
-          CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,1)
+          CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,2)
 *
 *       Form rate of tidal energy change during last regular step.
           IF (KZ(14).EQ.3) THEN
@@ -159,6 +159,11 @@
 *    &                            (FDR(K) + FD(K))*PX
 *       Second-order term derived by Douglas Heggie (Aug/03).
    24         CONTINUE
+          END IF
+*
+*       Include the force from optional gaseous Plummer potential.
+          IF (KZ(14).GE.3) THEN
+              CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,-1)
           END IF
       END IF
 *
@@ -321,7 +326,7 @@
           END IF
       END IF
 *
-*       Obtain radial neighbour velocities *inside* half-mass radius (NB<=3).
+*       Calculate the radial velocity with respect to at most 3 neighbours.
       IF (NNB.LE.3.AND.RI2.LT.RH2) THEN
           A1 = 1.2*RS(I)
 *
@@ -377,7 +382,7 @@
       L = 2
       LG = 2
 *       Set termination value in ILIST(NNB+2) and save last list member.
-      ILIST(NNB+2) = NTOT + 1
+      ILIST(NNB+2) = NTOT + 2
       ILIST(1) = LIST(NNB0+1,I)
 *
 *       Compare old and new list members in locations L & LG.
@@ -403,7 +408,7 @@
    58 IF (L.LE.NNB0) THEN
           L = L + 1
           LG = LG + 1
-*       Last value of second search index is NNB + 2 which holds NTOT + 1.
+*       Last value of second search index is NNB + 2 which holds NTOT + 2.
           GO TO 56
       ELSE IF (LG.LE.NNB) THEN
           LG = LG + 1
@@ -498,18 +503,18 @@
           FDR0 = FDR(K) - (FIDOT(K,I) - FD(K))
 *
           FRD = FRDOT(K,I)
-	  SUM = FRD + FDR0
-	  AT3 = 2.0D0*DFR + DTR*SUM
-	  BT2 = -3.0D0*DFR - DTR*(SUM + FRD)
+          SUM = FRD + FDR0
+          AT3 = 2.0D0*DFR + DTR*SUM
+          BT2 = -3.0D0*DFR - DTR*(SUM + FRD)
 *
-	  X0(K,I) = X0(K,I) + (0.6D0*AT3 + BT2)*DTSQ12
-	  X0DOT(K,I) = X0DOT(K,I) + (0.75D0*AT3 + BT2)*DTR13
+          X0(K,I) = X0(K,I) + (0.6D0*AT3 + BT2)*DTSQ12
+          X0DOT(K,I) = X0DOT(K,I) + (0.75D0*AT3 + BT2)*DTR13
 *
           FI(K,I) = FIRR(K)
-	  FR(K,I) = FREG(K)
+          FR(K,I) = FREG(K)
           F(K,I) = 0.5D0*(FREG(K) + FIRR(K))
           FIDOT(K,I) = FD(K)
-	  FRDOT(K,I) = FDR(K)
+          FRDOT(K,I) = FDR(K)
           FDOT(K,I) = ONE6*(FDR(K) + FD(K))
 *
           D0(K,I) = FIRR(K)
@@ -520,8 +525,8 @@
           D1(K,I) = FD(K)
           D1R(K,I) = FDR(K)
 *       Set second & third derivatives based on old neighbours (cf. FPCORR).
-	  D2R(K,I) = (3.0D0*AT3 + BT2)*DT2
-	  D3R(K,I) = AT3*DT6
+          D2R(K,I) = (3.0D0*AT3 + BT2)*DT2
+          D3R(K,I) = AT3*DT6
    75 CONTINUE
 *
 *       Correct force polynomials due to neighbour changes (KZ(38) or I > N).

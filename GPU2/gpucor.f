@@ -125,7 +125,7 @@
 *
 *!$omp critical
 *       Obtain the tidal perturbation (force and first derivative).
-          CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,1)
+          CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,2)
 *!$omp end critical
 *
 *       Form rate of tidal energy change during last regular step.
@@ -143,6 +143,11 @@
 *    &                            (FDR(K) + FD(K))*PX
    24         CONTINUE
 *       Note: second-order term derived by Douglas Heggie (Aug/03).
+          END IF
+*
+*       Include the force from optional gaseous Plummer potential.
+          IF (KZ(14).GE.3) THEN
+              CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,-1)
           END IF
       END IF
 *
@@ -578,8 +583,8 @@
       END IF
 *
 *       Copy new neighbour list if different from old (also on FPCORR skip).
-      IF (NBLOSS + NBGAIN.GT.0.OR.KZ(38).NE.1) THEN
-*       Note NBLOSS+NBGAIN is usually positive for KZ(38) = 1.
+      IF (NBLOSS.NE.0.OR.NBGAIN.NE.0.OR.KZ(38).NE.1) THEN
+*       Note NBLOSS+NBGAIN usually > 0 for KZ(38) = 1 (but NBLOSS < 0 poss).
           LIST(1,I) = NNB
           DO 80 L = 2,NNB+1
               LIST(L,I) = KLIST(L)

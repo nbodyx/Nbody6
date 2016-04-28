@@ -165,11 +165,7 @@
 *       CLM     Individual cloud masses in solar masses (maximum MCL).
 *       RCL2    Half-mass radii of clouds in pc (square is saved).
 ***
-* BRAKE4: if (max(K*).ge.13.and.kz(11).ne.0)
-*
-*       CLIGHT  Velocity of light in N-body units (unless read by CHAIN).
-*
-* CHAIN:  if compiled with ARChain
+* CHAIN:  if compiled with ARChain; also by KSINT (NB! Two copies here).
 *
 *       CLIGHT  Velocity of light in N-body units (e.g. 3.0D+05/VSTAR).
 *       NBH     Number of BHs for special treatment (redundant but keep).

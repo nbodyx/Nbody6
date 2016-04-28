@@ -1,6 +1,6 @@
 FFLAGS = -O
 #FFLAGS = -g -fnonstd
-FORTRAN = f77
+FORTRAN = gfortran
 
 SOURCE = \
 cfuncs.f chain.f chstab.f const.f cstab2.f cstab3.f cstab4.f \

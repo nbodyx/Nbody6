@@ -29,11 +29,11 @@
 *
 *
 *       Initialize GR parameters and current time (in case #28 = 0).
-      IF (FIRST) THEN
-          CVEL = 3.0D+05/VSTAR
-          CLIGHT = CVEL
-          FIRST = .FALSE.
-      END IF
+*     IF (FIRST) THEN
+*         CVEL = 3.0D+05/VSTAR
+*         CLIGHT = CVEL
+*         FIRST = .FALSE.
+*     END IF
       KZ24 = KZ(24)
       TAUGR = 1.3D+18*RAU**4/SMU**3
       TSP = TOFF + TIME
@@ -43,6 +43,9 @@
 *
       DO 15 L = 1,NCH
           J = JLIST(L)
+*         WRITE (6,77)  J, NAME(J), KSTAR(J), BODY(J)*SMU
+*  77     FORMAT (' CHINIT    J NM K* MJ ',3I6,F7.2)
+*         CALL FLUSH(6)
           IF (J.LE.0) THEN
           WRITE (6,1)  NCH, L, J
     1     FORMAT (' BAD INITIAL MEMBER!    NCH L J ',3I4)
@@ -119,9 +122,8 @@
           RINV(L) = 1.0/SQRT(RLK2)
    10 CONTINUE
 *
-*       Reduce RSUM by geometrical factor and check upper limit from IMPACT.
-      IF (NCH.EQ.4) RSUM = 0.5*RSUM
-      RSUM = MIN(FLOAT(NCH-1)*RSUM/FLOAT(NCH),RMIN)
+*       Reduce RSUM by geometrical factor.
+      RSUM = FLOAT(NCH-1)*RSUM/FLOAT(NCH)
 *
 *       Define gravitational radius for initial perturber list.
       RGRAV = SUM/ABS(ENERGY)

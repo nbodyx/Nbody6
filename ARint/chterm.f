@@ -31,7 +31,7 @@
           VI20 = VI20 + X0DOT(K,ICM)**2
       END DO
 *
-*       Include optional kick velocity of 3*VRMS km/s for GR coalescence.
+*       Include optional kick velocity of 5*VRMS km/s for GR coalescence.
       IF (KZ(43).GT.0.AND.NBH2.EQ.1) THEN
           VF = 5.0*(VRMS/VSTAR)/SQRT(VI20)
           DO 10 K = 1,3
@@ -40,7 +40,7 @@
    10     CONTINUE
           ECD0 = ECDOT
           ECDOT = ECDOT + 0.5*BODY(ICM)*VI20*(1.0 - VF**2)
-          VESC = 3.0*VRMS
+          VESC = 5.0*VRMS
           WRITE (6,20)  VF, ECD0-ECDOT, SQRT(VI20)*VSTAR, VESC
    20     FORMAT (' COALESCENCE KICK    VF ECDOT VCM VESC ',
      &                                  F7.2,F10.6,2F6.1)

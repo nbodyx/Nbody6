@@ -1,5 +1,4 @@
       
-      CLIGHT = 18000.0
       ECC = 0.308
       SEMI = 7.0D-07
       ECC = 0.99
@@ -13,6 +12,10 @@
       ECC = 0.0
       SEMI = 4.3D-10
       SMU = 8.9D+07
+      SMU = 45000.0
+      CLIGHT = 30000.0
+      ECC = 0.999
+      SEMI = 3.0D-05
       TAUGR = 1.3D+18*RAU**4/SMU**3
       WRITE (6,1) TAUGR
     1 FORMAT (' TAUGR   ',1P,E10.2)
@@ -20,11 +23,8 @@
           FE = 1.0 + (73.0/24.0 + 37.0*ECC2/96.0)*ECC2
           GE = (1.0 - ECC2)**3.5/FE
           ZX = 3.0D-04
-      ZX = 8.0D-04
-          RATIO = 1.0
-      ZX = 2.0D-05
-      RATIO = 0.5
-*         RATIO = 7.6/0.8
+      ZX = 4.4D-4
+      RATIO = 1.0
 *       Replace physical time-scale by N-body units (cf. Lee 1993).
 *         TZ = TAUGR*GE*SEMI**4/(RATIO*(1.0 + RATIO)*ZX**3)
           TZ = GE*SEMI**4/(RATIO*(1.0 + RATIO)*ZX**3)

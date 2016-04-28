@@ -55,7 +55,7 @@ absorb.f chaos2.f chdata.f chfind.f chfirr.f chinit.f chlist.f chmod.f \
 chpert.f chpot.f chterm.f expel2.f fchain.f ghost.f giant2.f kcpert.f \
 reduce.f reinit.f renew.f setsys.f tchain.f xcpred.f xtpert.f \
 brake4.f ksrot.f deform2.f expand2.f circ.f spinup.f kstran.f \
-qstab.f
+pnpert2.f newton.f qstab.f
 
 
 OBJECTS = $(SOURCE:.f=.o)

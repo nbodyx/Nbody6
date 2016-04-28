@@ -25,7 +25,8 @@
      &                ECOLL1,RCOLL,QPERI,ISTAR(NMX),ICOLL,ISYNC,NDISS1
       COMMON/SLOW3/  GCRIT,KZ26
       COMMON/INCOND/  X4(3,NMX),XDOT4(3,NMX)
-*
+      SAVE NAMESC,NAMESC2
+      DATA NAMESC,NAMESC2 /0,0/
 *
 *       Identify the dominant perturber (skip if none or NN >= 5).
       ITRY = 0
@@ -76,12 +77,12 @@
               END IF
     3     CONTINUE
 *       Bypass RDOT < 0 test for approaching ejection candidate.
-          IF (RDX.LT.0.0.AND.RJX.LT.2.0*RSUM/FLOAT(NN-1)) THEN
-              WRITE (6,4)  NAME(JCLOSE), GPERT, RIJ, RJX, RDX
-    4         FORMAT (' TRY ABSORB    NAM PERT RIJ RJX RDX ',
-     &                                I6,F6.2,1P,4E9.1)
-              GO TO 5
-          END IF
+*         IF (RDX.LT.0.0.AND.RJX.LT.2.0*RSUM/FLOAT(NN-1)) THEN
+*             WRITE (6,4)  NAME(JCLOSE), GPERT, RIJ, RJX, RDX
+*   4         FORMAT (' TRY ABSORB    NAM PERT RIJ RJX RDX ',
+*    &                                I6,F6.2,1P,4E9.1)
+*             GO TO 5
+*         END IF
       END IF
 *
 *       Include conditions for skipping (large RIJ & size or small GPERT).
@@ -208,7 +209,7 @@
 *
 *       Absorb the perturber (single particle or binary).
           IF (JCLOSE.GT.N.AND.NN.GE.5) GO TO 10
-          CALL ABSORB(ISUB)
+          IF (KZ(30).GT.2) CALL ABSORB(ISUB)
 *
 *       Reduce time since new c.m. step may be very small.
           TIME = MIN(TIME,TBLOCK)
@@ -396,12 +397,16 @@
                   VINF = 0.0
               END IF
               IF (KZ(30).GT.1.OR.VINF.GT.1.0) THEN
+                  IF (NAMEC(IESC).NE.NAMESC) THEN
                   WRITE (6,28)  IESC, JESC, NAMEC(IESC), NAMEC(JESC),
-     &                          RI, RDOT**2, 2.0*BODY(ICH)/RI, RB, VINF
+     &                    RI, RDOT**2, 2.0*BODY(ICH)/RI, RB, GPERT, VINF
    28             FORMAT (' CHAIN ESCAPE:    IESC JESC NM RI RDOT2 ',
-     &                                      '2*M/R RB VINF ',
-     &                                       2I3,2I6,1P,4E9.1,0P,F6.1)
-                  KCASE = -2
+     &                                       '2*M/R RB GP VINF ',
+     &                                       2I3,2I6,1P,5E9.1,0P,F6.1)
+                      NAMESC = NAMEC(IESC)
+                  END IF
+                  KCASE = -3
+                  IF (VINF.GT.1.0) GO TO 60     ! Ensures binary removal.
               END IF
 *       Enforce termination (KCASE < 0) if NCH <= 4 (final membership <= 2).
               IF (NCH.LE.4) THEN
@@ -461,6 +466,11 @@
               IF ((ER.LT.0.0.AND.RX.LT.MIN(2.0*RSUM,2.0*RMIN)).OR.
      &            (RSUM.LT.5.0*RMIN.AND.GPERT.LT.0.01)) THEN
                   KCASE = 0
+                  IF (RI.GT.10.0*RMIN) KCASE = -1
+                  GO TO 60
+              END IF
+              IF (RI.GT.10.0*RMIN) THEN
+                  KCASE = -1
                   GO TO 60
               END IF
               IF (RI.GT.MIN(0.5*RMAXS(ISUB),RMIN)) THEN
@@ -537,6 +547,10 @@
                   KCASE = 0
                   GO TO 60
               END IF
+              IF (RI.GT.10.0*RMIN) THEN
+                  KCASE = -2
+                  GO TO 60
+              END IF
           END IF
 *
 *       Check that escaper is well separated (ratio > 3).
@@ -554,14 +568,18 @@
               VINF = 0.0
           END IF
           IF (KZ(30).GT.1.OR.VINF.GT.2.0) THEN
+              IF (NAMEC(IESC).NE.NAMESC2) THEN
               WRITE (6,35)  IESC, NAMEC(IESC), RI, RDOT**2,
      &                      2.0*BODY(ICH)/RI, VINF
    35         FORMAT (' CHAIN ESCAPE:    IESC NM RI RDOT2 2*M/R VF ',
      &                                   I3,I6,1P,3E9.1,0P,F6.1)
+                  NAMESC2 = NAMEC(IESC)
+              END IF
+              KCASE = -3
           END IF
-          KCASE = -2
 *       Ensure single body is removed in case of wide binary.
           JESC = 0
+          IF (VINF.GT.2.0) GO TO 60
       ELSE
           KCASE = 0
           GO TO 60
@@ -580,6 +598,21 @@
 *       Set phase indicator < 0 to ensure new time-step list in INTGRT.
    50 IPHASE = -1
 *
-   60 RETURN
+   60 CONTINUE
+*       Ensure no action on zero indices (otherwise looping).
+      IF (IESC.EQ.0.AND.JESC.EQ.0) KCASE = 0
+*       Allow larger termination size for improved initialization.
+      IF (KCASE.EQ.-3) THEN
+          IF (GPERT.LT.1.0D-04.AND.RI.LT.10.0*RMIN) KCASE = 0
+          IF (GPERT.LT.1.0D-02.AND.RI.LT.5.0*RMIN) KCASE = 0
+*       Include safety limit to enforce termination.
+          IF (RI.GT.25.0*RMIN) KCASE = -3
+          IF (KCASE.NE.0) THEN
+              WRITE (6,70) NAMEC(IESC), GPERT, (1.0/RINV(K),K=1,NN-1)
+   70         FORMAT (' ACTUAL ESCAPE    NAM G R ',I6,1P,5E10.2)
+          END IF
+      END IF
+*
+      RETURN
 *
       END

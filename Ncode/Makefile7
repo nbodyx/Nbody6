@@ -57,7 +57,7 @@ newton.f ksintp.f kspert2.f pnpert2.f
 
 OBJECTS = $(SOURCE:.f=.o)
 
-nbody6: $(OBJECTS)
+nbody7: $(OBJECTS)
 	$(FC) $(FFLAGS) $(OBJECTS) -o nbody7
 
 print:

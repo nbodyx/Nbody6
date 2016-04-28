@@ -74,8 +74,9 @@
       END IF
 *
 *       Include optional Plummer potential in the regular force.
-      IF (((KZ(14).EQ.3.AND.MP.GT.0.0D0).OR.KZ(14).EQ.4).
-     &    AND.KCASE.GT.0) THEN
+*       Note KCASE = 2 when called from REGINT/GPUCOR.
+      IF (((KZ(14).EQ.3.AND.MP.GT.0.0D0).OR.KZ(14).EQ.4).AND.
+     &    (ABS(KCASE).EQ.1)) THEN
           RI2 = AP2
           RRDOT = 0.0
           DO 40 K = 1,3

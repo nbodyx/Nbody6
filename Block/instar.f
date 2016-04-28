@@ -77,6 +77,10 @@
 *       Calculate scale factor for spin angular momentum.
       SPNFAC = ZMBAR*SU**2/(1.0D+06*TSTAR)
 *
+*       Define index locations for possible BHs with primordial binaries.
+      IB1 = 1
+      IB2 = 2
+*
       EPOCH1 = EPOCH0
       DO 10 I = 1,N
 *
@@ -96,7 +100,8 @@
                     KW = 1
                 END IF
 *               IF(M0.LE.0.01D0) KW = 10
-                IF (KZ(45).GT.0.AND.M0.GT.9.9.AND.I.LE.KZ(24)) KW = 14
+                IF (KZ(45).GT.0.AND.M0.GT.9.99.AND.
+     &          (I.EQ.IB1.OR.I.EQ.IB2)) KW = 14
              ENDIF
           ENDIF
           MC = 0.D0

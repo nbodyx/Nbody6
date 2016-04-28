@@ -15,12 +15,6 @@
 *       Check relativistic conditions (at least one >= NS).
       IF (MAX(KSTAR(I1),KSTAR(I2)).LT.13) GO TO 100
 *
-*       See whether CVEL has been initialized in ARchain.
-      IF (ITER.EQ.0) THEN
-          READ (5,*)  CLIGHT
-          ITER = 1
-      END IF
-*
 *       Specify the basic elements from BH or KS treatments.
       M1 = BODY(I1)
       M2 = BODY(I2)
@@ -115,7 +109,10 @@
       T0(I1) = T00
 *
       ITER = ITER + 1
-      IF (ITER.LT.1000.OR.MOD(ITER,1000).EQ.0) THEN
+      II = 1000
+      IF (DW.GT.5.0D-04) II = 10000     ! Need to reduce output.
+      IF (DW.GT.8.0D-04) II = 50000     ! Further reduction.
+      IF (ITER.LT.1000.OR.MOD(ITER,II).EQ.0) THEN
           WRITE (94,30)  TIME+TOFF, ECC, THETA, DT, TGR, SEMI, DW
    30     FORMAT (' GR SHRINK    T E TH DT TGR A DW ',
      &                           F11.4,F9.5,1P,3E9.1,E12.4,E10.2)
@@ -148,7 +145,7 @@
 *         KSPAIR = IPAIR
 *         CALL CMBODY(SEMI1,2)
 *
-*       Include optional kick velocity of 3*VRMS km/s for coalescence recoil.
+*       Include optional kick velocity of 5*VRMS km/s for coalescence recoil.
           IF (KZ(43).GT.0.AND.MIN(KSTAR(I1),KSTAR(I2)).GT.13) THEN
 *       Initialize basic variables at start of new step.
               VI20 = 0.0
@@ -158,14 +155,14 @@
                   VI20 = VI20 + XDOT(K,I)**2
    48         CONTINUE
 *
-              VF = 3.0*(VRMS/VSTAR)/SQRT(VI20)
+              VF = 5.0*(VRMS/VSTAR)/SQRT(VI20)
               DO 50 K = 1,3
                   XDOT(K,I) = VF*XDOT(K,I)
                   X0DOT(K,I) = XDOT(K,I)
    50         CONTINUE
               ECD0 = ECDOT
               ECDOT = ECDOT + 0.5*BODY(I)*VI20*(1.0 - VF**2)
-              VESC = 3.0*VRMS
+              VESC = 5.0*VRMS
               WRITE (6,60)  VF, ECD0-ECDOT, VESC
    60         FORMAT (' COALESCENCE KICK    VF ECDOT VESC ',
      &                                      F7.3,F10.6,F6.1)

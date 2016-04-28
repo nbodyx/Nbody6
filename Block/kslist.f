@@ -46,6 +46,7 @@
       END IF
 *
       RCRIT2 = 2.0*RAP**2/BODY(I)
+      IF (BODY(I).GT.20.0*BODYM) RCRIT2 = 20.0*RCRIT2
       RCRIT3 = RCRIT2*RAP/GMIN
 *       Base fast search on maximum single perturber mass (BODY1).
       RCRIT2 = RCRIT2*BODY1*CMSEP2
@@ -97,7 +98,7 @@
           END IF
 *
 *       Restrict look-up time to one period for active PN binary (< 1000*RZ).
-          IF (KZ(11).GT.0) THEN
+          IF (KZ(11).NE.0) THEN
               RP = SEMI*(1.0 - ECC)
               IF (RP.LT.1000.0*RZ) THEN
                   IGR = 1
@@ -130,8 +131,6 @@
                       LIST(2,I1) = N
                   END IF
               ELSE
-*                 STEP(I1) = TWOPI*SEMI*SQRT(SEMI/BODY(I))
-*                 STEP(I1) = MIN(STEP(I1),STEP(I))
 *       Avoid possible small period for standard binary (hence use c.m.).
                   STEP(I1) = STEP(I)
                   DT = 2.0*STEP(I1)

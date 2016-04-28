@@ -126,7 +126,7 @@
 *
 *       Retain final KS variables for explicit restart at merge termination.
       IF (TIME.LE.TBLOCK.AND.IPHASE.EQ.6) THEN
-          HM(NMERGE) = H(IPAIR)
+          HM(NMERGE) = H(IPAIR)       ! Note IPHASE may change after MERGE.
           DO 6 K = 1,4
               UM(K,NMERGE) = U(K,IPAIR)
               UMDOT(K,NMERGE) = UDOT(K,IPAIR)

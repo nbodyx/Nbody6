@@ -123,11 +123,11 @@
 *       Skip outward motion or separation > 5*RMIN.
                   IF ((RDX.GE.0.0.OR.RP.GT.5.0*RMIN).AND.
      &                IPN.LE.1) GO TO 100
-                  WRITE (6,220)  TIME+TOFF, NAME(JCLOSE), KSTAR(I1),
-     &                           KSTAR(I2), LIST(1,I1), GAMMA(IPAIR),
-     &                           SEMI, R(IPAIR)
-  220             FORMAT (' ACTIVATE CHAIN    T NMJ K* NP G A R ',
-     &                                        F9.1,I7,3I4,1P,3E10.2)
+*                 WRITE (6,220)  TIME+TOFF, NAME(JCLOSE), KSTAR(I1),
+*    &                           KSTAR(I2), LIST(1,I1), GAMMA(IPAIR),
+*    &                           SEMI, R(IPAIR)
+* 220             FORMAT (' ACTIVATE CHAIN    T NMJ K* NP G A R ',
+*    &                                        F9.1,I7,3I4,1P,3E10.2)
                   KSPAIR = IPAIR
 *       Restore unperturbed motion from BRAKE4 (NP = 0 fixes some problem).
                   IF (GAMMA(IPAIR).LT.1.0D-10) THEN
@@ -197,7 +197,7 @@
       IF (ITERM.EQ.1) THEN
 *       Delay chain regularization search until near end of block-step.
           IF (TIME + STEP(I1).GT.TBLOCK) THEN
-              CALL IMPACT(I)
+              IF (TTOT.GT.TIME_CH) CALL IMPACT(I)
               IF (IPHASE.GT.0) GO TO 100
           END IF
       ELSE IF (ITERM.EQ.2) THEN
@@ -779,8 +779,9 @@
      &             (X(3,I)-X(3,J))*(XDOT(3,I)-XDOT(3,J))
               IF (RIJ2.LT.RCR2) THEN
                   IF (RIJ2.LT.RX2) THEN
-*       Allow for second perturber using JCMAX procedure in SETSYS.
+*       Allow for extra perturber using JCMAX procedure in SETSYS.
                       NCL = NCL + 1
+*       Note JCLOSE comes first in sequential list and may not be dominant.
                       IF (NCL.EQ.1) THEN
                           RX2 = RIJ2
                           RRD = RD
@@ -788,8 +789,15 @@
                           VIJ2 = (XDOT(1,I) - XDOT(1,J))**2 +
      &                           (XDOT(2,I) - XDOT(2,J))**2 +
      &                           (XDOT(3,I) - XDOT(3,J))**2
-                      ELSE
-                          JCMAX = J   ! Note JCMAX > N is OK (see SETSYS).
+                      ELSE IF (NCL.EQ.2) THEN
+                          JCMAX = J
+                          FMAX = (BODY(I) + BODY(J))/RIJ2
+*       See whether the third strong perturber dominates the second.
+                      ELSE IF (NCL.EQ.3.AND.J.LE.N) THEN
+                          FIJ = (BODY(I) + BODY(J))/RIJ2
+                          IF (FIJ.GT.FMAX) THEN
+                              JCMAX = J
+                          END IF
                       END IF
                   END IF
               END IF
@@ -798,7 +806,7 @@
           IF (JCLOSE.EQ.0) GO TO 88
           IF (NAME(JCLOSE).LE.0) GO TO 88
 *       Include delay time to avoid repeat events (DANGER: do not use GPERT).
-          IF (TTOT.GT.TIME_CH) THEN
+          IF (TTOT.GT.TIME_CH.OR.GI.GT.0.2) THEN
 *       Skip chain selection if close perturber > 5*SEMI or impact > 5*SEMI.
               RX = SQRT(RX2)
               SEMI1 = 2.0/RX - VIJ2/(BODY(I) + BODY(JCLOSE))
@@ -834,11 +842,12 @@
    86             FORMAT (' KSINT CHAIN B-B    A AJ PM RX ',1P,4E10.2)
               END IF
 *
+              EB = BODY(I1)*BODY(I2)*HI*BODYIN
               EORB = -0.5*BODY(I)*BODY(JCLOSE)/SEMI1
               WRITE (6,87)  TTOT, NAME(JCLOSE), NCL, LIST(1,I1),
-     &                      SEMI, RX, EORB, GI
-   87         FORMAT (' NEW CHAIN    T NMJ NCL NP A RX EORB GI ',
-     &                               F9.3,I6,2I4,1P,4E10.2)
+     &                      SEMI, RX, EB, EORB, GI
+   87         FORMAT (' NEW CHAIN    T NMJ NCL NP A RX EB EORB GI ',
+     &                               F9.3,I6,2I4,1P,5E10.2)
 *       Set next new chain time to avoid escaper being absorbed.
               TIME_CH = TTOT + 0.001
 *       Initiate chain regularization directly (B-B or B-S: see IMPACT).
@@ -858,6 +867,10 @@
 *       Initialize new ARchain or standard chain.
               CALL DELAY(1,KS2)
               GO TO 100
+          ELSE
+*       Reset indicators to zero after unsuccessful test.
+              JCLOSE = 0
+              JCMAX = 0
           END IF
       END IF
 *       Include KS termination for failed chain test.

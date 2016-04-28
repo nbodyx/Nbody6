@@ -175,7 +175,7 @@
 *       Obtain improved initial guess by factor of 2 bisecting (Chris Tout).
       IT = 0
 *       Choose a conservative starting value in case of small RM.
-      Y = DT*MIN(1.0/RM,0.5/ABS(a1))
+      Y = DT*MIN(1.0/RM,0.2/ABS(a1))   ! Reduced from 0.5 to 0.2 01/2015.
     8 Z = BETA*Y**2
       CALL CFUNCS(Z,C)
       Y0 = DT - ((ZETA*C(3)*Y + ETA*C(2))*Y + RM)*Y

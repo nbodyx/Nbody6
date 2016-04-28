@@ -27,7 +27,7 @@
       END IF
 *
 *       Search for high velocities after escape or KS/chain termination.
-  999 IF (IPHASE.EQ.-1.OR.IPHASE.GE.2) THEN
+  999 IF (KZ(37).GT.0.AND.(IPHASE.EQ.-1.OR.IPHASE.GE.2)) THEN
           CALL HIVEL(0)
       END IF
 *
@@ -114,13 +114,6 @@
       LI = 0
       IPRED = 0
 *
-*     ID = 0
-*     IF (NSTEPI.EQ.1008936) ID = 1
-*     IF (NSTEPI.GE.1008764) THEN
-*     WRITE (6,22) NXTLEN, NSTEPI, I, NAME(I), STEP(I), STEPR(I)
-* 22  FORMAT (' NEXT   LEN # I NM DT DTR  ',I5,I9,2I6,1P,2E10.2)
-*     CALL FLUSH(6)
-*     END IF
 *       Re-determine list if current time exceeds boundary.
       IF (TIME.GT.TLISTQ) GO TO 1
 *
@@ -138,6 +131,8 @@
           IF (MPDOT.GT.0.0D0.AND.TIME + TOFF.GT.TDELAY) THEN
               CALL PLPOT1(PHI1)
               MP = MP0/(1.0 + MPDOT*(TIME + TOFF - TDELAY))
+*       Adjust the tidal radius
+              RTIDE = RTIDE0*((ZMASS + MP)/(1.0 + MP0))**0.3333
 *       Replace by exponential mass loss for faster decrease.
 *             DT = TIME + TOFF - TDELAY
 *             MP = MP0*EXP(-MPDOT*DT)

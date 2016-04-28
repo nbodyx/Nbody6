@@ -148,23 +148,24 @@
       IF (TIME2.GT.0.0D0) THEN
           CALL STEPK(DT2,DTN2)
           DTN = NINT(DTN2/DT8)*DT8
-      ELSE
+*     ELSE
 *       Choose negative step if pericentre time < TPREV (cf. iteration).
-          DT2 = -DT2
-          CALL STEPK(DT2,DTN2)
-          DTN = -NINT(DTN2/DT8)*DT8
+*         DT2 = -DT2            ! Warning! May be zero (SJA 04/16).
+*         CALL STEPK(DT2,DTN2)
+*         DTN = -NINT(DTN2/DT8)*DT8
       END IF
 *
 *       Update time for new polynomial initializations (also for CMBODY).
       TIME = TPREV + DTN
 *       Adopt block time in rare case of DT2 reduced to SMAX.
-      IF (DTN.LE.SMAX) TIME = TBLOCK
+***   IF (DTN.LE.SMAX) TIME = TBLOCK
 *
 *       Set TIMEC for collision to preserve TIME2 after T0S = TIME in SUBSYS.
       IF (ITERM.LT.0.0) TIMEC = T0S(ISUB) + TIMEC - TIME
 *
 *       Restrict TIME to current block-step and save for use by KSPERI.
       TIME = MIN(TBLOCK,TIME)
+      TIME = TBLOCK         ! Adopt safety first condition.
       TIME0 = TIME
 *
 *       Predict current X & XDOT for c.m. and neighbours to order F3DOT.
@@ -387,11 +388,8 @@
 *
 *       Perform KS regularization of dominant components (ICOMP < JCOMP).
       IF (JCOMP.LE.N) THEN
-*       Save index of dominant bodies for neighbour list check.
-          IC1 = ICOMP
-          IC2 = JCOMP
-*
           CALL KSREG
+          IF (NN.GE.4) STEP(NTOT) = STEP(NTOT)/8.0D0
 *       Produce diagnostics on ejection velocity of escaper > 2*VSTAR.
           IF (SQRT(VX2)*VSTAR.GT.2.0*VSTAR) THEN
               J1 = 2*NPAIRS - 1
@@ -405,24 +403,6 @@
    64         FORMAT (' CHAIN BINARY    NM M1 M2 VCM A PB ',
      &                                  2I7,2F6.1,F7.1,1P,2E10.2)
           END IF
-*
-*       Search LISTC for missing dominant bodies in nearby neighbour lists.
-      NP = LISTC(1)
-      DO 68 L = 2,NP
-          J = LISTC(L)
-          NB1 = LIST(1,J) + 1
-          I0 = 0
-*       Check whether IC1 & IC2 are members.
-          DO 65 LL = 2,NB1
-              IF (LIST(LL,J).EQ.IC1.OR.LIST(LL,J).EQ.IC2) I0 = I0 + 1
-   65     CONTINUE
-*
-*       Add new c.m. at the end after failed search (NBREST not used).
-          IF (I0.EQ.0) THEN
-              LIST(NB1+1,J) = NTOT
-              LIST(1,J) = LIST(1,J) + 1
-          END IF
-   68 CONTINUE
 *
 *       Restore TIME in case modified by routine KSPERI.
           TIME = TIME0

@@ -359,16 +359,20 @@
 *
 *       See whether any KS candidates are in the same block as body #I.
       IF (IKS.GT.0.AND.I.EQ.ICOMP) THEN
-*       Accept same time, otherwise reduce STEP(ICOMP) and/or delay.
+*       Accept same time, otherwise enforce KS with predicted X & X0DOT.
           IF (T0(JCOMP).EQ.T0(ICOMP)) THEN
               ICOMP = MIN(ICOMP,JCOMP)
               JCOMP = MAX(I,JCOMP)
-          ELSE IF (T0(JCOMP) + STEP(JCOMP).LT.T0(ICOMP)) THEN
-              STEP(ICOMP) = 0.5D0*STEP(ICOMP)
-              TNEW(ICOMP) = STEP(ICOMP) + T0(ICOMP)
-              IKS = 0
           ELSE
-              IKS = 0
+*       Predict #JCOMP and update velocity X0DOT (not on block).
+              TPRED(JCOMP) = 0.0
+              CALL JPRED(JCOMP)
+              DO 88 K = 1,3
+                  X0DOT(K,JCOMP) = XDOT(K,JCOMP)
+   88         CONTINUE
+*       Redefine KS components in the usual way.
+              ICOMP = MIN(ICOMP,JCOMP)
+              JCOMP = MAX(I,JCOMP)
           END IF
       END IF
 *

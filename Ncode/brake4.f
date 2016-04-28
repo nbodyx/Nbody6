@@ -147,7 +147,7 @@
 *         KSPAIR = IPAIR
 *         CALL CMBODY(SEMI1,2)
 *
-*       Include optional kick velocity of 3*VRMS km/s for coalescence recoil.
+*       Include optional kick velocity of 5*VRMS km/s for coalescence recoil.
           IF (KZ(43).GT.0.AND.MIN(KSTAR(I1),KSTAR(I2)).GT.13) THEN
 *       Initialize basic variables at start of new step.
               VI20 = 0.0
@@ -157,14 +157,14 @@
                   VI20 = VI20 + XDOT(K,I)**2
    48         CONTINUE
 *
-              VF = 3.0*(VRMS/VSTAR)/SQRT(VI20)
+              VF = 5.0*(VRMS/VSTAR)/SQRT(VI20)
               DO 50 K = 1,3
                   XDOT(K,I) = VF*XDOT(K,I)
                   X0DOT(K,I) = XDOT(K,I)
    50         CONTINUE
               ECD0 = ECDOT
               ECDOT = ECDOT + 0.5*BODY(I)*VI20*(1.0 - VF**2)
-              VESC = 3.0*VRMS
+              VESC = 5.0*VRMS
               WRITE (6,60)  VF, ECD0-ECDOT, VESC
    60         FORMAT (' COALESCENCE KICK    VF ECDOT VESC ',
      &                                      F7.3,F10.6,F6.1)

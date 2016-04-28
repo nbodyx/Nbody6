@@ -14,13 +14,16 @@
       COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
      &                LISTC(LMAX)
       COMMON/CPERT/  RGRAV,GPERT,IPERT,NPERT
+      SAVE ITER
+      DATA ITER /0/
 *
 *
 *       Replace zero argument from CHAIN by #ICH.
       IF (I.EQ.0) I = ICH
 *       Use 5 x harmonic mean of RMIN & RGRAV for basic search distance.
 *     RPERT = 5.0*RMIN*ABS(RGRAV)/(RMIN + ABS(RGRAV))
-      RPERT = RSUM      ! adopted 11/15.
+      RPERT = 0.5*RSUM      ! adopted 01/16.
+      RPERT = MIN(RPERT,2.0*RMIN)
       RCRIT2 = 2.0*RPERT**2/BODY(ICH)
       RCRIT3 = RCRIT2*RPERT/(0.01*GMIN)
       RCRIT2 = CMSEP2*RPERT**2  ! maybe a bit much

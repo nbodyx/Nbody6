@@ -77,6 +77,15 @@
 *       Calculate scale factor for spin angular momentum.
       SPNFAC = ZMBAR*SU**2/(1.0D+06*TSTAR)
 *
+*       Define index locations for possible BHs with primordial binaries.
+      IF (KZ(24).GT.0) THEN
+          IB1 = 2*NBIN0 + 1
+          IB2 = 2*NBIN0 + 2
+      ELSE
+          IB1 = 0
+          IB2 = 0
+      END IF
+*
       EPOCH1 = EPOCH0
       DO 10 I = 1,N
 *
@@ -96,8 +105,8 @@
                     KW = 1
                 END IF
 *               IF(M0.LE.0.01D0) KW = 10
-*               IF(M0.GE.100.D0) KW = 14
-                IF (KZ(45).GT.0.AND.M0.GT.9.0.AND.I.LE.KZ(24)) KW = 14
+                IF (KZ(45).GT.0.AND.M0.GT.9.9.AND.
+     &          (I.EQ.IB1.OR.I.EQ.IB2)) KW = 14
              ENDIF
           ENDIF
           MC = 0.D0
@@ -124,7 +133,7 @@
           RADIUS(I) = RM/SU
           ZLMSTY(I) = LUM
           SPIN(I) = JSPIN/SPNFAC
-*
+
 *       Check neutron star option for GR capture (avoid large masses).
           IF (KZ(27).EQ.3.AND.KZ(28).EQ.4) THEN
               RADIUS(I) = 1.0D-12/(3.0*RBAR)

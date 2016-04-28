@@ -144,23 +144,26 @@
                   LIST(NB1+1,J) = NTOT
                   LIST(1,J) = LIST(1,J) + 1
               END IF
+      IF (I0.GT.0) WRITE (6,37)  I0
+   37 FORMAT (' CATCH CHTERM2    I0 ',I4)
+      CALL FLUSH(6)
    40     CONTINUE
       END IF
 *
-*       Include optional kick velocity of 3*VRMS km/s after GR coalescence.
+*       Include optional kick velocity of 5*VRMS km/s after GR coalescence.
       IF (KZ(43).GT.0.AND.NBH2.EQ.2) THEN
           VI20 = 0.0
           DO 42 K = 1,3
               VI20 = VI20 + XDOT(K,NTOT)**2
    42     CONTINUE
-          VF = 3.0*(VRMS/VSTAR)/SQRT(VI20)
+          VF = 5.0*(VRMS/VSTAR)/SQRT(VI20)
 *       Note c.m. is assigned kick because both members would escape.
           DO 44 K = 1,3
               XDOT(K,NTOT) = VF*XDOT(K,NTOT)
               X0DOT(K,NTOT) = XDOT(K,NTOT)
    44     CONTINUE
           ECD0 = ECDOT
-          VESC = 3.0*VRMS
+          VESC = 5.0*VRMS
           ECDOT = ECDOT + 0.5*BODY(NTOT)*VI20*(1.0 - VF**2)
           WRITE (6,45)  LIST(1,2*NPAIRS-1), VF, ECD0-ECDOT, VESC
    45     FORMAT (' COALESCENCE KICK    NP VF ECDOT VESC ',
@@ -169,15 +172,15 @@
           KSTAR(NTOT) = 14
       END IF
 *
-      IF (NSTEP1.GT.100.OR.NBH2.EQ.2) THEN
-          NP = LIST(1,2*NPAIRS-1)
-          ZMU = BODY(2*NPAIRS-1)*BODY(2*NPAIRS)/BODY(NTOT)
-          EB = ZMU*H(NPAIRS)
-          WRITE (6,46)  NSTEP1, NP, LIST(1,NTOT), EB, ECH, H(NPAIRS),
-     &                  R(NPAIRS), STEP(NTOT)
-   46     FORMAT (' TERMINATE ARC    # NP NNB EB ECH H R STEP ',
-     &                                 I7,2I4,1P,5E10.2)
-      END IF
+*     IF (NSTEP1.GT.100.OR.NBH2.EQ.2) THEN
+*         NP = LIST(1,2*NPAIRS-1)
+*         ZMU = BODY(2*NPAIRS-1)*BODY(2*NPAIRS)/BODY(NTOT)
+*         EB = ZMU*H(NPAIRS)
+*         WRITE (6,46)  NSTEP1, NP, LIST(1,NTOT), EB, ECH, H(NPAIRS),
+*    &                  R(NPAIRS), STEP(NTOT)
+*  46     FORMAT (' TERMINATE ARC    # NP NNB EB ECH H R STEP ',
+*    &                                 I7,2I4,1P,5E10.2)
+*     END IF
 *
 *       Reduce subsystem counter and initialize membership & internal energy.
       NSUB = MAX(NSUB - 1,0)

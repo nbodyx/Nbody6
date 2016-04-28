@@ -24,6 +24,11 @@
       TIME = CHTIME + T0S(ISUB)
       CALL XCPRED(1)
 *
+      IF (ISNAN(1.0/RINV(NN-1))) THEN
+      WRITE (6,44) 
+   44 FORMAT (' XTPERT   ',1P,6E10.2)
+      STOP
+      END IF
 *       Initialize the external perturbations.
       NK = 3*NN
       DO 1 K = 1,NK

@@ -142,7 +142,7 @@
           END IF
 *
 *       Obtain the tidal perturbation (force and first derivative).
-          CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,1)
+          CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,2)
 *
 *       Form rate of tidal energy change during last regular step.
           IF (KZ(14).EQ.3) THEN
@@ -159,6 +159,11 @@
 *    &                            (FDR(K) + FD(K))*PX
 *       Second-order term derived by Douglas Heggie (Aug/03).
    24         CONTINUE
+          END IF
+*
+*       Include the force from optional gaseous Plummer potential.
+          IF (KZ(14).GE.3) THEN
+              CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDR,-1)
           END IF
       END IF
 *
@@ -377,7 +382,7 @@
       L = 2
       LG = 2
 *       Set termination value in ILIST(NNB+2) and save last list member.
-      ILIST(NNB+2) = NTOT + 1
+      ILIST(NNB+2) = NTOT + 2
       ILIST(1) = LIST(NNB0+1,I)
 *
 *       Compare old and new list members in locations L & LG.
@@ -403,7 +408,7 @@
    58 IF (L.LE.NNB0) THEN
           L = L + 1
           LG = LG + 1
-*       Last value of second search index is NNB + 2 which holds NTOT + 1.
+*       Last value of second search index is NNB + 2 which holds NTOT + 2.
           GO TO 56
       ELSE IF (LG.LE.NNB) THEN
           LG = LG + 1

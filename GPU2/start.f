@@ -76,11 +76,12 @@
           DO 22 I = 1,N
               IF (BODY(I).GT.0.5*BODY1) II = I  ! catches the last BH.
    22     CONTINUE
-          NAM1 = NAME(II)
-          NAME(II) = 1
-          NAME(1) = NAM1
-          WRITE (6,25)  II, NAME(II), BODY(II), BODY(II)*SMU, X(1,I)
-   25     FORMAT (' RENAME BH    I NM BODY M X1 ',2I5,1P,4E10.2)
+          NAM2 = NAME(II)
+          NAM1 = NAME(II-1)
+          NAME(II) = 2
+          NAME(II-1) = 1
+          WRITE (6,25)  II, NAME(II), NAME(II-1), BODY(II)*SMU
+   25     FORMAT (' RENAME BH    I NM BODY M ',3I5,1P,4E10.2)
       END IF
 *
 *       Randomize particle indices (dummy routine for standard code).

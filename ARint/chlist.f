@@ -21,9 +21,9 @@
 *     IF (II.EQ.0) I = ICH
 *       Use 5 x harmonic mean of RMIN & RGRAV for basic search distance.
 *     RPERT = 5.0*RMIN*ABS(RGRAV)/(RMIN + ABS(RGRAV))
-      RPERT = RSUM      ! adopted 11/15.
+      RPERT = MIN(0.5*RSUM,2.0*RGRAV)
       RCRIT2 = 2.0*RPERT**2/BODY(ICH)
-      RCRIT3 = RCRIT2*RPERT/(0.01*GMIN)
+      RCRIT3 = RCRIT2*RPERT/(0.03*GMIN)
       RCRIT2 = CMSEP2*RPERT**2  ! maybe a bit much
       GPERT = 0.0
 *

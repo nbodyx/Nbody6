@@ -564,8 +564,9 @@
      &             (X(3,I)-X(3,J))*(XDOT(3,I)-XDOT(3,J))
               IF (RIJ2.LT.RCR2) THEN
                   IF (RIJ2.LT.RX2) THEN
-*       Allow for second perturber using JCMAX procedure in SETSYS.
+*       Allow for extra perturber using JCMAX procedure in SETSYS.
                       NCL = NCL + 1
+*       Note JCLOSE comes first in sequential list and may not be dominant.
                       IF (NCL.EQ.1) THEN
                           RX2 = RIJ2
                           RRD = RD
@@ -573,8 +574,15 @@
                           VIJ2 = (XDOT(1,I) - XDOT(1,J))**2 +
      &                           (XDOT(2,I) - XDOT(2,J))**2 +
      &                           (XDOT(3,I) - XDOT(3,J))**2
-                      ELSE
+                      ELSE IF (NCL.EQ.2) THEN
                           JCMAX = J
+                          FMAX = (BODY(I) + BODY(J))/RIJ2
+*       See whether the third strong perturber dominates the second.
+                      ELSE IF (NCL.EQ.3.AND.J.LE.N) THEN
+                          FIJ = (BODY(I) + BODY(J))/RIJ2
+                          IF (FIJ.GT.FMAX) THEN
+                              JCMAX = J
+                          END IF
                       END IF
                   END IF
               END IF
@@ -604,11 +612,12 @@
 *             EBT = EB + ZMU*(0.5*(RRD/RX)**2-(BODY(I)+BODY(JCLOSE)/RX))
 *             IF (EBT.GT.5.0*EBH) GO TO 88
 *
+              EB = BODY(I1)*BODY(I2)*HI*BODYIN
               EORB = -0.5*BODY(I)*BODY(JCLOSE)/SEMI1
-              WRITE (6,86)  TTOT, NAME(JCLOSE), LIST(1,I1),
-     &                      STEP(JCLOSE), SEMI, RX, EORB, GI
-   86         FORMAT (' NEW CHAIN   T NMJ NP STEPJ A RIJ EORB GI ',
-     &                              F9.3,I6,I4,1P,5E10.2)
+              WRITE (6,86)  TTOT, NAME(JCLOSE), NCL, LIST(1,I1),
+     &                      STEP(JCLOSE), SEMI, RX, EB, EORB, GI
+   86         FORMAT (' NEW CHAIN   T NMJ NCL NP STEPJ A RIJ EB EORB G',
+     &                              F9.3,I6,2I4,1P,6E10.2)
               TIME_CH = TTOT + 0.001
 *       Initiate chain regularization directly (B-B or B-S: see IMPACT).
               JCOMP = JCLOSE

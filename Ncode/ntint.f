@@ -82,8 +82,14 @@
       END IF
 *
 *       Do not permit current TIME to be exceeded.
-      IF (T0(I) + TTMP.GT.TIME) THEN
+      IF ((T0(I) + TTMP.GT.TIME).AND.(TIME.NE.T0(I))) THEN
           TTMP = TIME - T0(I)
+      END IF
+*
+*       Do not exceed next output time. Otherwise the predicted 
+*       positions may not correspond to the output time.
+      IF (T0(I) + TTMP.GT.TNEXT.AND.(TIME.NE.TNEXT)) THEN
+          TTMP = TNEXT - T0(I)
       END IF
 *
 *       Set new block step and update next time.
@@ -94,7 +100,7 @@
       NSTAIL = NSTAIL + 1
 *
 *       See whether to continue until end of large block-step.
-      IF (TNEW(I).LT.TIME) THEN
+      IF (TNEW(I).LE.TIME) THEN
           ITER = ITER + 1
           IF (ITER.LT.10) GO TO 1
           WRITE (6,20)  I, TIME, STEP(I), FIRR

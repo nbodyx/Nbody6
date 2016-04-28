@@ -20,7 +20,7 @@
       REAL*8  EI0(3),EI(3)
       LOGICAL IQ
       SAVE ITERM
-      SAVE  EI0
+      SAVE  EI0,IT
       DATA  EI0,IT /3*0.0D0,0/
       SAVE RI,HI
 *
@@ -34,6 +34,7 @@
 *       Initialize NEW CHAIN delay time after start/restart.
       IF (IT.EQ.0) THEN
           TIME_CH = 0.0
+          READ (5,*) CLIGHT
           IT = 1
       END IF
 *
@@ -79,7 +80,8 @@
   215             CONTINUE
                   RP = SQRT(RX2)
 *       Skip outward motion or separation > 5*RMIN.
-                  IF (RDX.GE.0.0.OR.RP.GT.5.0*RMIN) GO TO 100
+                  IF (RDX.GE.0.0.OR.RP.GT.5.0*RMIN.OR.
+     &            GAMMA(IPAIR).LT.1.0D-03) GO TO 100  ! Avoid big R in CHAIN.
                   WRITE (6,220)  TIME+TOFF, JCLOSE, KSTAR(I1),
      &                           KSTAR(I2), LIST(1,I1), GAMMA(IPAIR),
      &                           SEMI, R(IPAIR)
@@ -141,6 +143,11 @@
 *
 *       Initialize termination indicator and check for large perturbation.
       IQ = .FALSE.
+*       Include special treatment of massive binary but exclude hierarchy.
+      IF (GI.GT.0.03.AND.BODY(I).GT.20.0*BODYM.AND.NAME(I).GT.0) THEN
+          SEMI = -0.5*BODY(I)/HI
+          IF (SEMI.GT.0.0.AND.SEMI.LT.5.0*RMIN) GO TO 84
+      END IF
 *       Skip for weaker perturbation or hierarchical systems.
       IF (GI.LT.0.03.OR.NAME(I).LT.0) THEN
           JCOMP = 0
@@ -197,7 +204,7 @@
               IF (SEMI.GT.3.0*RMIN) IQ = .TRUE.
 *       Note failed chain with R' < 0 & IQ = .true. leads to KS switching.
           END IF
-          IF (SEMI.GT.0.0.AND.SEMI.LT.3.0*RMIN) GO TO 84
+          IF (SEMI.GT.0.0.AND.SEMI.LT.5.0*RMIN) GO TO 84
       END IF
 *
 *       Check termination of hyperbolic encounter (R > R0 or R > 2*RMIN).
@@ -434,7 +441,7 @@
           GO TO 100
       END IF
 *
-*       Check optional output of periapse angle on unit #12.
+*       Check optional output of periapse angle on unit #49.
       IF (KZ(29).GE.0) GO TO 70
 *
 *       Evaluate Runge-Lenz eccentricity vector from physical variables.
@@ -663,7 +670,7 @@
 *
 *       See whether a massive subsystem can be selected for CHAIN.
   84  IF (NCH.EQ.0.AND.SEMI.LT.5.0*RMIN.AND.NAME(I).GT.0.AND.
-     &    GI.GT.0.05) THEN
+     &    GI.GT.0.03) THEN
 *
 *       Check optional BH condition (prevents mass-loss complications).
           IF (KZ(11).LE.-2) THEN
@@ -686,8 +693,9 @@
      &             (X(3,I)-X(3,J))*(XDOT(3,I)-XDOT(3,J))
               IF (RIJ2.LT.RCR2) THEN
                   IF (RIJ2.LT.RX2) THEN
-*       Allow for second perturber using JCMAX procedure in SETSYS.
+*       Allow for extra perturber using JCMAX procedure in SETSYS.
                       NCL = NCL + 1
+*       Note JCLOSE comes first in sequential list and may not be dominant.
                       IF (NCL.EQ.1) THEN
                           RX2 = RIJ2
                           RRD = RD
@@ -695,8 +703,15 @@
                           VIJ2 = (XDOT(1,I) - XDOT(1,J))**2 +
      &                           (XDOT(2,I) - XDOT(2,J))**2 +
      &                           (XDOT(3,I) - XDOT(3,J))**2
-                      ELSE
-                          JCMAX = J    ! Note JCMAX > N is OK (see SETSYS).
+                      ELSE IF (NCL.EQ.2) THEN
+                          JCMAX = J
+                          FMAX = (BODY(I) + BODY(J))/RIJ2
+*       See whether the third strong perturber dominates the second.
+                      ELSE IF (NCL.EQ.3.AND.J.LE.N) THEN
+                          FIJ = (BODY(I) + BODY(J))/RIJ2
+                          IF (FIJ.GT.FMAX) THEN
+                              JCMAX = J
+                          END IF
                       END IF
                   END IF
               END IF
@@ -726,11 +741,12 @@
 *             EBT = EB + ZMU*(0.5*(RRD/RX)**2-(BODY(I)+BODY(JCLOSE)/RX))
 *             IF (EBT.GT.5.0*EBH) GO TO 88
 *
+              EB = BODY(I1)*BODY(I2)*HI*BODYIN
               EORB = -0.5*BODY(I)*BODY(JCLOSE)/SEMI1
               WRITE (6,86)  TTOT, NAME(JCLOSE), NCL, LIST(1,I1),
-     &                      STEP(JCLOSE), SEMI, RX, EORB, GI
-   86         FORMAT (' NEW CHAIN   T NMJ NCL NP STEPJ A RIJ EORB GI ',
-     &                              F9.3,I6,2I4,1P,5E10.2)
+     &                      STEP(JCLOSE), SEMI, RX, EB, EORB, GI
+   86         FORMAT (' NEW CHAIN   T NMJ NCL NP STEPJ A RIJ EB EORB G',
+     &                              F9.3,I6,2I4,1P,6E10.2)
 *       Set next new chain time to avoid escaper being absorbed.
               TIME_CH = TTOT + 0.001
 *       Initiate chain regularization directly (B-B or B-S: see IMPACT).
@@ -754,6 +770,10 @@
 *       Initialize new ARchain.
               CALL DELAY(1,KS2)
               GO TO 100
+          ELSE
+*       Reset indicators to zero after unsuccessful test.
+              JCLOSE = 0
+              JCMAX = 0
           END IF
       END IF
 *

@@ -114,15 +114,6 @@
       LI = 0
       IPRED = 0
 *
-*     ID = 0
-*     IF (NSTEPI.EQ.1008936) ID = 1
-*     IF (TIME.GT.3.21) THEN
-*     WRITE (6,22) NXTLEN, NSTEPI, I, NAME(I), STEP(I), STEPR(I)
-* 22  FORMAT (' NEXT   LEN # I NM DT DTR  ',I5,I9,2I6,1P,2E10.2)
-*     WRITE (6,1100)  NPAIRS, IFIRST, TIME, T0(1)+STEP(1), STEP(1)
-*1100 FORMAT (' EXTRA   NPR I* T T0+S S  ',2I5,2F12.6,1P,E10.2)
-*     CALL FLUSH(6)
-*     END IF
 *       Re-determine list if current time exceeds boundary.
       IF (TIME.GT.TLISTQ) GO TO 1
 *
@@ -140,6 +131,8 @@
           IF (MPDOT.GT.0.0D0.AND.TIME + TOFF.GT.TDELAY) THEN
               CALL PLPOT1(PHI1)
               MP = MP0/(1.0 + MPDOT*(TIME + TOFF - TDELAY))
+*       Adjust the tidal radius
+              RTIDE = RTIDE0*((ZMASS + MP)/(1.0 + MP0))**0.3333
 *       Replace by exponential mass loss for faster decrease.
 *             DT = TIME + TOFF - TDELAY
 *             MP = MP0*EXP(-MPDOT*DT)

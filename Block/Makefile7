@@ -56,7 +56,8 @@ reduce.f ffdot.f reinit.f setsys.f tchain.f xcpred.f xtpert.f \
 arc.f pnpert.f xtpert2.f bhstat.f bhstab.f emax1.f \
 grbin.f inject.f infall.f decorr.f chterm2.f cpertx.f cpertj.f kcpert.f \
 brake4.f ksrot.f deform2.f expand2.f renew.f \
-ksintp.f newton.f pnpert2.f circ.f spinup.f kstran.f
+ksintp.f newton.f pnpert2.f circ.f spinup.f kstran.f \
+qstab.f kstran2.f chstab.f cstab4.f cstab2.f r2sort.f
 
 OBJECTS = $(SOURCE:.f=.o)
 
@@ -68,4 +69,4 @@ print:
 	@cat $(SOURCE) > NBODY6.TEXT
 
 clean:
-	rm *.o
+	rm -f *.o

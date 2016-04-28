@@ -61,8 +61,8 @@
   54     *   Close encounter inside 5 maximum radii (ksint.f)
   55     *   Encounter inside tidal capture radius (# 27; ksint.f)
   56     -   Plotting file for TIME, TPHYS, <R>, MASS, NCOLL (# 44 > 0)
-  57     -   Not used
-  58     -   Not used
+  57     -   BH binary plotting data (ARC)
+  58     -   Diagnostic ARC CHAIN info: T, IPN, NPERT, RSUM, RGRAV, GPERT
   59     -   Not used
   60     -   Not used
   61     -   Not used

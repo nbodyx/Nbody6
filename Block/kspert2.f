@@ -7,6 +7,9 @@
       INCLUDE 'common6.h'
       COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
      &                LISTC(LMAX)
+      COMMON/GALAXY/ GMG,RG(3),VG(3),FG(3),FGD(3),TG,
+     &               OMEGA,DISK,A,B,V02,RL2,GMB,AR,GAM,ZDUM(7)
+      REAL*8  XG(3),XGDOT(3),FM(3),FMD(3),FS(3),FSD(3)
       REAL*8  XI(6),VI(6),FP(6),FD(6),TF(3),TD(3),XK(6),VK(6),RDOT(3)
       REAL*8  UI(4),UIDOT(4),XREL(3),VREL(3)
       SAVE IC,IX
@@ -239,7 +242,7 @@
       END IF
 *
 *       Check optional Plummer potential.
-      IF (KZ(14).EQ.4.OR.KZ(14).EQ.3) THEN
+      IF (MP.GT.0.0) THEN
           RI2 = AP2
           RRDOT = 0.0
 *       Form one central distance and scalar product of relative motion.
@@ -310,6 +313,24 @@
                   CALL FLUSH(50)
               END IF
           END IF
+      END IF
+*
+*       Include possible contribution from central point-mass.
+      IF (GMG.GT.0.0D0) THEN
+          DO 95 K = 1,3
+              XG(K) = RG(K) + XI(K)   ! Note XG used for each KS component.
+              XGDOT(K) = VG(K) + VI(K)
+   95     CONTINUE
+          CALL FNUC(XG,XGDOT,FS,FSD)
+          DO 100 K = 1,3
+              XG(K) = RG(K) + XI(K+3)
+              XGDOT(K) = VG(K) + VI(K+3)
+  100     CONTINUE
+          CALL FNUC(XG,XGDOT,FM,FMD)
+          DO 105 K = 1,3
+              FP(K) = FP(K) + (FS(K) - FM(K))
+              FD(K) = FD(K) + (FSD(K) - FMD(K))
+  105     CONTINUE
       END IF
 *
       RETURN

@@ -21,7 +21,7 @@
       DO 6 L = 1,2
       DO 5 I = 1,N
           IF (NAME(I).EQ.1.AND.IBH.EQ.0) IBH = I
-          IF (NAME(I).EQ.2.AND.IBH.GT.0) JBH = I
+          IF (NAME(I).EQ.2.AND.IBH.GT.0.AND.JBH.EQ.0) JBH = I
     5 CONTINUE
     6 CONTINUE
       IF (KZ(24).LT.2) JBH = 0
@@ -234,6 +234,25 @@
      &                    F8.1,I4,F6.1,F7.1,2F9.5,1P,2E10.2)
       CALL FLUSH(49)
 *
-  200 RETURN
+  200 CONTINUE
+*
+      IF (IBH.GT.0.AND.JBH.GT.0) THEN
+*       Exclude free-floating component or hierarchy.
+          IF (JBH.GT.2*NPAIRS.OR.IABS(IBH-JBH).NE.1) GO TO 300
+          IPAIR = KVEC(IBH)
+          SEMI = -0.5*BODY(N+IPAIR)/H(IPAIR)
+          ECC2 = (1.0 - R(IPAIR)/SEMI)**2 +
+     &                           TDOT2(IPAIR)**2/(BODY(N+IPAIR)*SEMI)
+          ECC = SQRT(ECC2)
+          EB = -0.5*BODY(IBH)*BODY(JBH)/SEMI
+          IPN = -1
+          NP = LIST(1,2*IPAIR-1)
+          WRITE (57,210)  IPN, TIME+TOFF, ECC, SEMI, EB, NP,GAMMA(IPAIR)
+  210     FORMAT (' BBH   IP T E A EB NP G ',
+     &                    I3,F12.5,F9.5,1P,E12.4,0P,F12.6,I3,1P,E9.1)
+          CALL FLUSH(57)
+      END IF
+*
+  300 RETURN
 *
       END

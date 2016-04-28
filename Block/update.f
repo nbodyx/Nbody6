@@ -72,7 +72,7 @@
 *       See whether ICM is on neighbour list (otherwise skip splitting).
           IF (LIST(L,J).EQ.ICM) MOVE = 1
           IF (LIST(L,J).NE.ICM) THEN
-              LIST(L,J) = LIST(L,J) - 1
+              LIST(L,J) = LIST(L,J) - 1  ! Note ICM not on LIST (see DO 85).
               L = L - 1
               GO TO 70
           END IF
@@ -117,6 +117,12 @@
               IW = IW + 1
           END IF
    80 CONTINUE
+*
+*       Check last member exceeding NTOT (bug fix 01/16 from NBODY5/2000).
+      DO 85 J = 1,NTOT
+          NB1 = LIST(1,J) + 1
+          IF (LIST(NB1,J).GT.NTOT) LIST(NB1,J) = NTOT
+   85 CONTINUE
 *
 *       Modify the list of previously regularized binaries.
       NNB = LISTR(1) - 1
