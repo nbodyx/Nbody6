@@ -4,8 +4,8 @@
 *       Degenerate triple chain stability test.
 *       ---------------------------------------
 *
-      INCLUDE 'commonc.h'
-      INCLUDE 'common2.h'
+      INCLUDE '../Chain/commonc.h'
+      INCLUDE '../Chain/common2.h'
       COMMON/CHREG/  TIMEC,TMAX,RMAXC,CM(10),NAMEC(6),NSTEP1,KZ27,KZ30
       REAL*8  M,MB,MB1,R2(NMX,NMX),XCM(3),VCM(3),XX(3,3),VV(3,3),
      &        XCM3(3),VCM3(3)
