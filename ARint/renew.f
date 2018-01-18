@@ -22,7 +22,7 @@
       TK = TWOPI*SEMI*SQRT(SEMI/BODY(I))
 *
 *       Estimate consistent unperturbed interval.
-      CALL TPERT(IPAIR,GMIN,DT)
+      CALL TPERT(IPAIR,GMIN,DT,JCL)
 *
 *       Specify unperturbed motion (subject to DT > 0).
       K = 1 + INT(0.5D0*DT/TK)
@@ -47,19 +47,19 @@
       CALL NBPOT(1,NCH,POT2)
       DPHI = POT1 - POT2
 *
-*       Form new KS polynomials if nearest perturber is significant (> GMIN).
-      IF (DT.LT.0.0) THEN
+*       Form perturber list and initialize KS on small time-scale.
+      IF (DT.LT.TK) THEN
           CALL KSLIST(IPAIR)
           CALL KSPOLY(IPAIR,1)
       END IF
 *
-*       Subtract binding energy from temporary save in ECOLL.
+*       Subtract binding energy from temporary addition to ECOLL.
       EB = BODY(I1)*BODY(I2)*H(IPAIR)/BODY(I)
       ECOLL = ECOLL - EB + DPHI
 *
-      IF (KZ(30).GT.1) THEN
+      IF (KZ(30).GT.0) THEN
           WRITE (6,5)  IPAIR, EB, R(IPAIR), GAMMA(IPAIR), DPHI, K
-    5     FORMAT (' RENEW:    KS =',I3,'  EB =',F8.2,'  R =',1P,E8.1,
+    5     FORMAT (' RENEW:    KS =',I4,'  EB =',F8.2,'  R =',1P,E8.1,
      &            '  G =',E8.1,'  DPHI =',E8.1,'  DT/TK =',0P,I4)
       END IF
 *

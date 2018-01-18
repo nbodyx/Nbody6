@@ -14,7 +14,7 @@
       EB = -0.5*BODY(I1)*BODY(I1+1)/SEMI
       ECC2 = (1.0 - R(IPAIR)/SEMI)**2 + TDOT2(IPAIR)**2/(BODY(I)*SEMI)
       ECC = SQRT(ECC2)
-      IT = 0
+*     IT = 0
 *
 *       Use semi-major axis and/or RMIN for perturber selection.
       IF (EB.LT.EBH) THEN
@@ -30,7 +30,7 @@
           IF (SEMI.GT.0.0D0.AND.R(IPAIR).GT.SEMI) THEN
               RAP = SEMI*(1.0 + ECC)
           ELSE
-*       Accept separation limit for hyperbolic cases.
+*       Accept separation limit for hyperbolic case.
               RAP = MAX(ZFAC*SEMI,R(IPAIR))
           END IF
 *       Ensure extra perturbers at new regularizations (R may be small).
@@ -44,17 +44,15 @@
      &   (R(IPAIR).LT.0.1*SEMI.OR.SEMI.LT.0)) THEN
           RAP = MIN(RMIN,0.1*ABS(SEMI))
       END IF
-      IF (SEMI.LT.0.0) RAP = MAX(RAP,10.0*RMIN)
 *
       RCRIT2 = 2.0*RAP**2/BODY(I)
-      IF (BODY(I).GT.20.0*BODYM) RCRIT2 = 20.0*RCRIT2
-      RCRIT3 = RCRIT2*RAP/GMIN
-*       Base fast search on maximum binary mass (BODY1).
+      RFAC = RCRIT2*RAP/GMIN
+*       Base fast search on maximum single perturber mass (BODY1).
       RCRIT2 = RCRIT2*BODY1*CMSEP2
-      RCRIT6 = RCRIT3**2
 *
 *       Select new perturbers from the neighbour list.
-    6 NNB1 = 1
+*   6 NNB1 = 1
+      NNB1 = 1
       NNB2 = LIST(1,I) + 1
       DO 10 L = 2,NNB2
           J = LIST(L,I)
@@ -65,7 +63,7 @@
 *       Include any merged c.m. or chain c.m. bodies in the fast test.
           IF (RSEP2.LT.RCRIT2.OR.NAME(J).LE.0) THEN
 *       Estimate unperturbed distance from tidal limit approximation.
-              IF (RSEP2**3.LT.BODY(J)**2*RCRIT6) THEN
+              IF (RSEP2*SQRT(RSEP2).LT.RFAC*BODY(J)) THEN
                   NNB1 = NNB1 + 1
                   LIST(NNB1,I1) = J
               ELSE IF (J.GT.N) THEN
@@ -79,15 +77,6 @@
           END IF
    10 CONTINUE
 *
-*       Ensure at least one perturber first time (max 5 tries except CHAOS).
-*     IF (NNB1.EQ.1.AND.IPHASE.GT.0.AND.NNB2.GT.1.AND.TIME.GT.0.0) THEN
-*         RCRIT2 = 2.0*RCRIT2
-*         RCRIT6 = 2.0*RCRIT6
-*         IT = IT + 1
-*       Skip repeat for small size (next KSLIST requires many periods).
-*         IF ((SEMI*SU.GT.10.0.AND.IT.LE.5).OR.KSTAR(I).EQ.-1) GO TO 6
-*     END IF
-*
 *       Check case of no perturbers (dual purpose).
       IF (NNB1.EQ.1) THEN
 *       Add distant perturber for hyperbolic orbit.
@@ -98,7 +87,7 @@
           END IF
 *
 *       Restrict look-up time to one period for active PN binary (< 1000*RZ).
-          IF (KZ(11).NE.0) THEN
+          IF (KZ(11).GT.0) THEN
               RP = SEMI*(1.0 - ECC)
               IF (RP.LT.1000.0*RZ) THEN
                   IGR = 1
@@ -108,6 +97,9 @@
 *        Note usual transition from perturbed to unperturbed state in KSINT.
               IF (IGR.GT.0) THEN
                   STEP(I1) = TWOPI*SEMI*SQRT(SEMI/BODY(I))
+                  DT = 2.0*STEP(I1)
+                  CALL STEPK(DT,DTN)
+                  STEP(I1) = DTN
                   GO TO 20
               END IF
           END IF
@@ -116,6 +108,10 @@
 *       Specify one unperturbed period at apocentre (NB! check STEP(I)).
               STEP(I1) = TWOPI*SEMI*SQRT(SEMI/BODY(I))
               STEP(I1) = MIN(STEP(I1),STEP(I))
+*       Include quantization (interval shortened a little so compensate).
+              DT = 2.0*STEP(I1)
+              CALL STEPK(DT,DTN)
+              STEP(I1) = DTN
           ELSE
 *       Maintain perturbed motion during Chaos event (not ROCHE/SPIRAL).
               IF (KSTAR(I).EQ.-1) THEN
@@ -124,8 +120,13 @@
                       LIST(2,I1) = N
                   END IF
               ELSE
+*                 STEP(I1) = TWOPI*SEMI*SQRT(SEMI/BODY(I))
+*                 STEP(I1) = MIN(STEP(I1),STEP(I))
 *       Avoid possible small period for standard binary (hence use c.m.).
                   STEP(I1) = STEP(I)
+                  DT = 2.0*STEP(I1)
+                  CALL STEPK(DT,DTN)
+                  STEP(I1) = DTN
 *       Note reduction in BRAKE4 in case of active PN phase.
               END IF
           END IF

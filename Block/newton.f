@@ -23,7 +23,7 @@
       END IF
 *
 *       Note TD4 is 1/2 fourth derivative and TD5 is 1/4 fifth derivative.
-      DO 10 I = 1,15   ! above 10 iterations is quite rare.
+      DO 10 I = 1,20   ! above 4 iterations is quite rare.
           FX = (((((ZZ*TD6*DTU + ONE30*TD5)*DTU + ONE12*TD4)*DTU +
      &             ONE6*TDOT3(IP))*DTU + 0.5*TDOT2(IP))*DTU + R(IP))*DTU
           FD = ((((ONE120*TD6*DTU + ONE6*TD5)*DTU + ONE3*TD4)*DTU +
@@ -35,15 +35,14 @@
           FX = FX - STEP(2*IP-1)
 *      Include fast safety measures to prevent large values of FX/FD.
           TMP = FX/FD
-          IF (TMP.LT.-0.1*DTU) THEN
-              TMP = -0.1*DTU
-          ELSE IF (TMP.GT.0.1*DTU) THEN
-              TMP = 0.1*DTU
+          IF (TMP.LT.-0.2*DTU) THEN
+              TMP = -0.2*DTU
+          ELSE IF (TMP.GT.0.5*DTU) THEN
+              TMP = 0.5*DTU
           END IF
           DTU = DTU - TMP
           IF (DTU.LT.0.0D0) THEN
               DTU = 0.0
-*      Note upper limit DTAU(IP) removed 9/15 (rare DANGER case).
           END IF
 *      NB! Last value of DTU ensures actual tolerance < 1D-12 (TOL = 1D-10).
           IF (ABS(FX).LT.TOL.AND.DTU.GT.0.0D0) GO TO 30

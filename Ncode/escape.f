@@ -411,6 +411,7 @@
       N = N - 1
       NPAIRS = NPAIRS - 1
       IFIRST = 2*NPAIRS + 1
+      IF (NPAIRS.EQ.0) NNTB = 0
 *
 *       Move up all tables of regularized pairs below IPAIR.
       IF (IPAIR.LE.NPAIRS) THEN

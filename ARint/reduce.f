@@ -18,6 +18,7 @@
      &                NAMES(NCMAX,5),ISYS(5)
       COMMON/CCOLL2/  QK(NMX4),PK(NMX4),RIK(NMX,NMX),SIZE(NMX),VSTAR1,
      &                ECOLL1,RCOLL,QPERI,ISTAR(NMX),ICOLL,ISYNC,NDISS1
+      COMMON/ARZERO/  ISTAR0(NMX),SIZE0(NMX)
       COMMON/POSTN/  CVEL,TAUGR,RZ1,GAMMAZ,TKOZ,EMAX,TSP,KZ24,IGR,IPN
       COMMON/POSTN2/ SEMIGR,ECCGR,DEGR,ISPIN
       COMMON/INCOND/  X4(3,NMX),XDOT4(3,NMX)
@@ -31,9 +32,6 @@
       SAVE   ! this was a bug fix 14/5/11 - JESC lost.
 *
 *
-*       Count events and update chain reference time if necessary.
-      NCHAIN = NCHAIN + 1
-*     NSTEPC = NSTEP1
 *       Include possible testing of energy budget (checked OK).
 *     ID = 0
 *     IF (JESC.GT.0) ID = 1
@@ -211,7 +209,7 @@
       END IF
 *
 *       Obtain statistics for any single BHs at regular intervals.
-      IF (KZ(11).GT.1.AND.TCALL.LT.TTOT) THEN
+      IF (IABS(KZ(11)).GT.1.AND.TCALL.LT.TTOT) THEN
           TCALL = TTOT + 1.0
           CALL BHSTAT
       END IF
@@ -264,9 +262,10 @@
       NCH = NCH - 1
       NN = NCH
       MASS = MASS - M(IESC)
-*
 *       Improve coordinates & velocities of c.m. body to order F3DOT.
-      CALL XVPRED(ICH,-1)
+      IF (ABS(TIME-T0(ICH)).LE.STEP(ICH)) THEN
+          CALL XVPRED(ICH,-1)
+      END IF
 *
 *       Set new c.m. for reduced system and save old c.m. variables.
       DO 20 K = 1,3
@@ -336,10 +335,10 @@
       JLIST(1) = ICH
       CALL NBREST(I,1,NNB)
 *
-      IF (KZ(30).GT.1) THEN
-          WRITE (6,53)  NAME0, NAME(ICH), ICH
-   53     FORMAT (' REDUCE:    SWITCH C.M.    NAME0 NAMECH ICH ',3I7)
-      END IF
+*     IF (KZ(30).GT.1) THEN
+*         WRITE (6,53)  NAME0, NAME(ICH), ICH
+*  53     FORMAT (' REDUCE:    SWITCH C.M.    NAME0 NAMECH ICH ',3I7)
+*     END IF
 *
 *       Exchange name of reference body and initialize new c.m. name.
       NAME(I) = NAME0
@@ -362,11 +361,6 @@
 *       Restore the mass and transform to global coordinates & velocities.
       BODY(I) = BODYC(IESC)
       T0(I) = TIME
-      IF (ISTAR(IESC).NE.KSTAR(I)) THEN
-          WRITE (6,62)  NAME(I), ISTAR(IESC), KSTAR(I), BODY(I)*SMU
-   62     FORMAT (' IDENTITY CHANGE!    NM I* K* M ',I7,2I4,F7.2)
-      END IF
-      KSTAR(I) = ISTAR(IESC)  ! included 13/10/11
       DKP = 0.0
       DECM = 0.0
       DKE = 0.0
@@ -391,12 +385,14 @@
           INAME(L) = INAME(L+1)
           SIZE(L) = SIZE(L+1)
           ISTAR(L) = ISTAR(L+1)
+          SIZE0(L) = SIZE0(L+1)
+          ISTAR0(L) = ISTAR0(L+1)
           BODYS(L,ISUB) = BODYS(L+1,ISUB)
           NAMES(L,ISUB) = NAMES(L+1,ISUB)
    70 CONTINUE
 *
 *       Ensure current coordinates & velocities for chain components.
-      CALL XCPRED(1)
+      CALL XCPRED(0)
 *
 *     RR2 = 0.0
 *     VR2 = 0.0
@@ -480,6 +476,7 @@
                CALL HIVEL(I)
           END IF
           IF (ISING.EQ.1) THEN
+              IF (JESC.EQ.0) GO TO 100
               IF (JESC.GT.IESC) JESC = JESC - 1
               IESC = JESC
               JESC = -1
@@ -503,13 +500,16 @@
           JCOMP = MAX(ICLOSE,I)
 *       Obtain new neighbour list to include current chain c.m. body.
           CALL NBLIST(ICOMP,RS0)
+          IPHASE = 2
           CALL KSREG
+          IPHASE = -1
           CALL CHLIST(ICH)
       END IF
 *
 *       Re-activate any dormant binary.
-      IF (I.GT.N.AND.JESC.EQ.0) THEN
+      IF (I.GT.N.AND.JESC.LE.0) THEN
           CALL RENEW(I)
+          NAMEC(10) = 0
       END IF
 *
 *       Include experimental procedure to catch new perturbers.
@@ -599,7 +599,7 @@
 *       Specify zero indicator for immediate exit from chain with NCH = 0.
 *             ISUB = 0
 *             NSUB = MAX(NSUB - 1,0)
-              NCH = 0
+*             NCH = 0             ! Elegance sacrificed for possible danger.
 *       Redefine chain c.m. as single to allow new case.
               NAME(ICH) = 99999
               IF (KZ(37).GT.0) CALL HIVEL(ICH)

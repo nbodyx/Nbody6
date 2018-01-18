@@ -31,7 +31,7 @@
 *       Estimate time interval to reach largest permitted perturbation.
       GX = RANGE*GMIN
       IP = IPAIR
-      CALL TPERT(IPAIR,GX,DT)
+      CALL TPERT(IPAIR,GX,DT,JCL)
       IPAIR = IP
 *
 *       Evaluate the unmodified Kepler period.

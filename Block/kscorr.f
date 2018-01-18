@@ -44,6 +44,7 @@
 *       Activate perturbation evaluation after one iteration above 1D-04.
       ITP = 0
       IF (GAMMA(IPAIR).GT.1.0D-04) ITP = 1
+*
 *       Perform one iteration without re-evaluating perturbations.
       DO 30 ITER = 1,2
 *
@@ -98,11 +99,10 @@
               CALL KSTRAN2(UI,UIDOT,Q1,Q2,Q3,RDOT)
               I = N + IPAIR
               BODYIN = 1.0/BODY(I)
-              DO 27 K = 1,3
-                  RDOT(K) = VI(K) - VI(K+3)
-   27         CONTINUE
               I1 = 2*IPAIR - 1
               NNB0 = LIST(1,I1)
+*       Reverse index to distinguish KSCORR call (no PN energy correction).
+              I1 = -I1
 *       Adopt KSINT procedure based on local variables for next iteration.
               CALL KSPERT2(I1,I,NNB0,BODYIN,Q1,Q2,Q3,RDOT,FP,FD)
               DO 28 K = 1,3
@@ -142,8 +142,9 @@
           TDOT4 = TDOT4 + UI(K)*FRD(K) + 6.0D0*UIDOT(K)*FREG(K)
           TDOT5 = TDOT5 + 0.5D0*FUDOT2(K,IPAIR)*UI(K) +
      &                          2.0D0*FRD(K)*UIDOT(K) + 6.0D0*FREG(K)**2
-          TDOT6 = TDOT6 + 2.0*U5(K)*UI(K) + 10.0*U4(K)*UIDOT(K) +
-     &                                      10.0*FRD(K)*FREG(K)    
+          TDOT6 = TDOT6 + 2.0*U5(K)*UI(K) +
+     &            10.0*FUDOT2(K,IPAIR)*UIDOT(K) + 40.0*FRD(K)*FREG(K)    
+*       Note factor 4 extra in FRD*FREG with 1/2 from each term.
    40 CONTINUE
 *
 *       Save R and second & third time derivatives.

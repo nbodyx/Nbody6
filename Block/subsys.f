@@ -28,7 +28,7 @@
           NAMES(L,ISUB) = NAME(J)
           IF (BODY(J).GT.BX) THEN
               BX = BODY(J)
-              LX = L
+              LX = L              ! May not be needed (cf. JLIST(x21).
           END IF
    10 CONTINUE
 *
@@ -61,12 +61,13 @@
       ICOMP = JLIST(1)
 *       Ensure heaviest body is selected in case of ARchain.
       IF (ISYS(ISUB).EQ.4) THEN
-          ICOMP = JLIST(LX)  
+*         ICOMP = JLIST(LX)  
+          ICOMP = JLIST(1)      ! First body adopted (10/16).
       END IF
 *       Define zero name for identification (only chain or ARchain c.m.).
       IF (ISYS(ISUB).GE.3) NAME(ICOMP) = 0
 *
-*       Initialize c.m in ICOMP (redefined above).
+*       Initialize c.m. in ICOMP (redefined above just in case).
       T0(ICOMP) = TIME
       BODY(ICOMP) = CM(7)
       DO 30 K = 1,3

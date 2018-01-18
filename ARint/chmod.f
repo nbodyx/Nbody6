@@ -21,12 +21,13 @@
       COMMON/INCOND/  X4(3,NMX),XDOT4(3,NMX)
       INTEGER  ISORT(NMX)
       REAL*8  XCM(3),VCM(3),XJ(3),VJ(3)
-      SAVE IT,IWARN,NAMESC,NAMESC2,NAMESC3
-      DATA IT,IWARN,NAMESC,NAMESC2,NAMESC3 /5*0/
+      SAVE IT,IWARN,NAMESC,NAMESC2,NAMESC3,NEXT
+      DATA IT,IWARN,NAMESC,NAMESC2,NAMESC3,NEXT /6*0/
 *
 *
       IESC = 0
       JESC = 0
+      RI = 0.0
 *       Copy chain variables to standard form.
       LK = 0
       DO 3 L = 1,NCH
@@ -119,6 +120,7 @@
               IESC = IT
               JESC = 0
               KCASE = 1
+              VINF = 0.0
               GO TO 40
           END IF
       END IF
@@ -238,7 +240,7 @@
               IF (NAMEC(L).EQ.NAME(JCLOSE)) THEN
               WRITE (6,144)  NAME(JCLOSE)
   144         FORMAT (' DANGER!   DUPLICATED   NMJ  ',I6)
-              GO TO 10
+              STOP
               END IF
   145     CONTINUE
 *
@@ -250,7 +252,7 @@
               DO 150 K = 1,NCH-1
                   RM = MIN(1.0/RINV(K),RM)
   150         CONTINUE
-              SMALL = 0.01*(RSUM - RIJ)
+              SMALL = 0.001*(RSUM - RIJ)
               IF (RM.LT.SMALL.AND.SEMI.LT.SMALL.AND.KX.LT.14) THEN
                   WRITE (6,155)  NAME(JCLOSE), GPERT, SEMI, RIJ,
      &                                         (1.0/RINV(K),K=1,NCH-1)
@@ -294,7 +296,8 @@
 *       Activate indicator for new chain treatment.
           KCASE = 1
           ITRY = ITRY + 1
-          GO TO 10
+*         GO TO 10
+          RETURN
       END IF
 *
 *       Check for rejection (RIJ > 2*MIN(RSUM,RMIN); RDOT > 0 & G < 0.05).
@@ -379,6 +382,7 @@
 *
 *       Determine index of escaper candidate (single star or binary).
 *       Distinguish two cases of each type (beginning & end of chain).
+      IBIN = 1     ! Needs to be defined for KCASE = 2.
       IF (ISORT(1).EQ.1) THEN
           IESC = INAME(1)
           KCASE = 1
@@ -391,8 +395,8 @@
           JESC = INAME(2)
           IBIN = 1
 *       Switch binary index in case last separation is smallest (NN >= 4).
-*         IF (RINV(1).LT.RINV(NN-1)) IBIN = NN - 1
           IF (RINV(1).LT.RINV(NN-1)) THEN
+              IBIN = NN - 1
               IF (BODYC(IESC) + BODYC(JESC).GT.0.5*MASS) THEN
                   IBIN = NN - 1
               END IF
@@ -405,8 +409,17 @@
           KCASE = 2
       END IF
 *
+*       Skip if biggest chain distance is not dominant.
+      IF (KCASE.EQ.1) THEN
+          IS = ISORT(1)
+          IF (1.0/RINV(IS).LT.0.8*RSUM) THEN
+              KCASE = 0
+              IESC = 0
+              GO TO 60
+          END IF
+      END IF
 *       Ensure massive binary is not removed (big single should be OK).
-      IF (KCASE.EQ.2.AND.NN.GT.4) THEN   ! Avoid problems with NN = 4.
+      IF (KCASE.EQ.2.AND.NN.GT.4) THEN   ! Avoid problems with NN >  4.
           IF (IESC.EQ.INAME(1)) THEN
               J1 = INAME(NN-1)
               J2 = INAME(NN)
@@ -422,6 +435,20 @@
               JESC = J2
               IBIN = NN - IBIN
           END IF
+      END IF
+*
+*       Exclude difficult cases (like small first binary).
+      IF (KCASE.EQ.2.AND.IBIN.EQ.1.AND.1.0/RINV(NN-1).GT.2.0*RMIN) THEN
+*       Switch to removal of last (single) member (R2>20*RMIN may take long).
+          IESC = INAME(NN)
+          JESC = 0
+*       Skip case of last distance exceeding RMIN.
+      ELSE IF (KCASE.EQ.2.AND.NCH.EQ.4.AND.1.0/RINV(IBIN).GT.RMIN) THEN
+          IESC = 0
+          JESC = 0
+          KCASE = 0
+          RI = 1.0/RINV(2)
+          GO TO 60
       END IF
 *
 *       Include escape check if middle distance is largest.
@@ -461,13 +488,16 @@
       IF (KCASE.EQ.0) GO TO 60
 *
 *       Ensure enforced escape of binary in wide four-body system.
-      IF (KCASE.EQ.2.AND.NCH.EQ.4.AND.1.0/RINV(2).GT.10.0*RMIN) THEN
-          IF (NAMEC(IESC).NE.NAMESC3) THEN
+      IF (KCASE.EQ.2.AND.NCH.EQ.4.AND.1.0/RINV(2).GT.20.0*RMIN) THEN
+          IF (NAMEC(IESC).NE.NAMESC3.AND.JESC.GT.0) THEN    ! JESC bug 2/17.
+              IF (NSTEP1.GT.NEXT) THEN
               WRITE (6,11)  NSTEP1, IESC, JESC, NPERT, NAMEC(IESC),
      &                      NAMEC(JESC), 1.0/RINV(IBIN), 1.0/RINV(2)
    11         FORMAT (' ENFORCED ESCAPE    # IESC JESC NP NAM RB R2 ',
      &                                     I6,3I4,2I7,1P,2E10.2)
               NAMESC3 = NAMEC(IESC)
+              NEXT = NSTEP1 + 50
+              END IF
           END IF
           RI = 1.0/RINV(2)
 *       Mark the smallest (last) binary for removal even if IESC/JESC = 1/2.
@@ -478,19 +508,28 @@
           KCASE = -3
           GO TO  60    ! attempt Dec 2015.
       END IF
+      IF (KCASE.EQ.2.AND.NCH.EQ.4) THEN
+          RI = 0.0
+          KCASE = 0
+          GO TO 60
+      END IF
 *
 *       Enforce escape for distant member with positive radial velocity.
       RD = X4(1,IESC)*XDOT4(1,IESC) + X4(2,IESC)*XDOT4(2,IESC)
      &                              + X4(3,IESC)*XDOT4(3,IESC)
-      IF (NCH.EQ.4.AND.RSUM.GT.40.0*RMIN.AND.RD.GT.0.0D0) THEN
+      IF (NCH.EQ.4.AND.RSUM.GT.20.0*RMIN.AND.RD.GT.0.0D0) THEN
           KCASE = 1
-          RI = 25.0*RMIN
+          RI = 20.0*RMIN
+          VINF = 0.0
+          IF (NSTEP1.GT.NEXT) THEN
       WRITE (6,41)  NSTEP1, IESC, JESC, GPERT, (1.0/RINV(K),K=1,NCH-1)
    41 FORMAT (' WIDE ESCAPE    # IESC JESC G R  ',I8,2I4,F8.4,1P,4E10.2)
+          NEXT = NSTEP1 + 20
+          END IF
           GO TO 40
       END IF
 *
-      IF (KZ(30).GT.2) THEN
+      IF (KZ(30).GT.3) THEN
           WRITE (6,12)  IESC, JESC, NSTEP1, ISORT(1),
      &                  (1.0/RINV(K),K=1,NN-1)
    12     FORMAT (' CHMOD:    IESC JESC # ISORT1 R ',2I3,I5,I3,1P,5E9.1)
@@ -999,7 +1038,6 @@
               END IF
 *       Ensure single body is removed in case of wide binary.
               JESC = 0
-              KCASE = -3
               IF (VINF.GT.2.0) GO TO 60
           END IF
       ELSE
@@ -1011,10 +1049,10 @@
    40 IF (NCH.GE.3) THEN
           IF (VINF.GT.0.0.AND.RDOT.GT.0.0) THEN
               IF (GPERT.GT.0.05.AND.RI.GT.40.0*RMIN) THEN
-                  KCASE = -4
                   GO TO 60
               END IF
           END IF
+          IF (GPERT.GT.0.005.AND.RI.GE.30.0*RMIN) GO TO 60
 *       Subtract largest chain distance from system size (also binary).
 *         IM = ISORT(1)
 *         RSUM = RSUM - 1.0/RINV(IM) - RB
@@ -1036,7 +1074,7 @@
                   KCASE = 0
                   GO TO 60
               END IF
-*        Check distance to nearest member.
+*       Check distance to nearest member.
               RP2 = 1.0
               DO 45 I = 1,NN
                   IF (I.EQ.IESC) GO TO 45
@@ -1053,7 +1091,7 @@
                   GO TO 60
               END IF
               RP = SQRT(RP2)
-              IF (GPERT.GT.0.05.OR.RP.GT.40.0*RMIN) KCASE = -4
+              IF (GPERT.GT.0.05.AND.RP.GT.40.0*RMIN) KCASE = -4
 *             WRITE (6,46) NSTEP1, KCASE, NCH, NAMEC(IESC), HI, RI,
 *    &                     GPERT, GX, RP, RDOT
 *  46         FORMAT (' REDUCE!   # KCASE NCH NMC HI RI GP GX RP RD ',
@@ -1061,40 +1099,176 @@
           END IF
 *
           IF (JESC.GT.0) THEN
-              WRITE (6,48)  NAMEC(IESC),NAMEC(JESC), 1.0/RINV(IBIN)
-   48         FORMAT (' BINARY!!!   NAM RB  ',2I6,1P,E10.2)
-              WRITE (6,49)  NSTEP1, IESC, JESC, (1.0/RINV(KK),KK=1,NN-1)
-   49         FORMAT (' # R  ',I8,2I4,1P,7E10.2)
+              WRITE (6,48)  NCH,NAMEC(IESC),NAMEC(JESC), 1.0/RINV(IBIN)
+   48         FORMAT (' BINARY!!!   NCH NAM RB  ',I4,2I6,1P,E10.2)
+              WRITE (6,49)  NSTEP1, IESC, JESC, GPERT,
+     &                      (1.0/RINV(KK),KK=1,NN-1)
+   49         FORMAT (' # GP R ',I8,2I4,1P,7E10.2)
               KCASE = -3         ! Set condition for enforced termination.
           END IF
-          IF (KZ(30).GT.1) THEN
+          IF (KZ(30).GT.3) THEN
               WRITE (6,55)  TIME+TOFF, NN, NAMEC(IESC), RI, RDOT
    55         FORMAT (' REDUCE    T NCH NAM RI RD ',
      &                            F10.3,I4,I7,1P,2E10.2)
           END IF
 *
-*  99     CALL REDUCE(IESC,JESC,ISUB)
-   99     CONTINUE
+*         CALL REDUCE(IESC,JESC,ISUB)
 *     ELSE
 *         KCASE = -1
       END IF
 *
-*       Set phase indicator < 0 to ensure new NLIST in routine INTGRT.
+*       Set phase indicator < 0 (not clear if needed).
    50 IPHASE = -1
 *
    60 CONTINUE
 *       Ensure no action on zero indices (otherwise looping).
       IF (IESC.EQ.0.AND.JESC.EQ.0) KCASE = 0
 *       Allow larger termination size for improved initialization.
-      IF (KCASE.EQ.-3) THEN
+      IF (KCASE.EQ.-3.OR.NCH.GT.3) THEN
           IF (GPERT.LT.1.0D-04.AND.RI.LT.10.0*RMIN) KCASE = 0
           IF (GPERT.LT.1.0D-02.AND.RI.LT.5.0*RMIN) KCASE = 0
+          IF (NN.GT.3.AND.RI.LT.5.0*RMIN) KCASE = 0
 *       Include safety limit to enforce termination.
-          IF (RI.GT.25.0*RMIN) KCASE = -3
-          IF (KCASE.NE.0) THEN
-              WRITE (6,70) NAMEC(IESC), GPERT, (1.0/RINV(K),K=1,NN-1)
-   70         FORMAT (' ACTUAL ESCAPE    NAM G R ',I6,1P,5E10.2)
+          IF (RI.GT.10.0*RMIN) KCASE = -3
+      END IF
+*
+*       Enforce binary removal for dominant middle distance.
+      RX = MAX(1.0/RINV(1),1.0/RINV(NN-1))
+      IF (NN.EQ.4.AND.((1.0/RINV(2).GT.5.0*RX.AND.GPERT.GT.0.01).OR.
+     &    (GPERT.GT.0.1.AND.1.0/RINV(2).GT.2.0*RX))) THEN
+          R1 = 1.0/RINV(1)
+          R2 = 1.0/RINV(2)
+          R3 = 1.0/RINV(3)
+          KCASE = -3
+*       Repeat specification of indices in case set to zero.
+          IF (ISORT(1).EQ.2) THEN
+              IESC = INAME(1)
+              JESC = INAME(2)
           END IF
+          WRITE (6,75)  KCASE, IESC, JESC, R1, R2, R3
+   75     FORMAT (' FOUR-BODY TERM!    KC IE JE R1 R2 R3 ',3I4,1P,3E9.1)
+          IF (R2.GT.1.0) STOP
+      ELSE IF (NN.EQ.4.AND.((RX.GT.5.0*RMIN.AND.GPERT.GT.0.02).OR.
+     &    (GPERT.GT.0.1.AND.RX.GT.3.0*RMIN))) THEN
+*       Check for removal of first or last distant single. (SJA 12/2016)
+          CALL HPSORT(NN-1,RINV,ISORT)
+          IESC = 0
+          IF (ISORT(1).EQ.1) THEN
+              IESC = INAME(1)
+          ELSE IF (ISORT(1).EQ.NN-1) THEN
+              IESC = INAME(NN)
+          END IF
+          IF (IESC.GT.0) THEN     ! Refinement 1/2017 avoids ABSORB repeats.
+              RD = X4(1,IESC)*XDOT4(1,IESC) + X4(2,IESC)*XDOT4(2,IESC)
+     &                                      + X4(3,IESC)*XDOT4(3,IESC)
+*       Ensure positive radial velocity for single escaper (include ABSORB).
+              IF (RD.GT.0.0) THEN
+                  KCASE = -3
+                  WRITE (6,80)  KCASE, IESC, JESC, RX, RX/RD
+   80             FORMAT (' FOUR-BODY TERM!    KC IE JE RX RDOT ',
+     &                                         3I4,1P,E10.2,0P,F7.2)
+                  JESC = 0
+              ELSE
+                  KCASE = 0
+              END IF
+          END IF
+      ELSE IF (NN.EQ.4.AND.IESC.GT.0) THEN
+          RD = X4(1,IESC)*XDOT4(1,IESC) + X4(2,IESC)*XDOT4(2,IESC)
+     &                                  + X4(3,IESC)*XDOT4(3,IESC)
+          IF (1.0/RINV(2).GT.20.0*RMIN.AND.RD.GT.0.0) THEN
+              KCASE = -3
+          ELSE
+              KCASE = 0
+          END IF
+      END IF
+*
+*       Include provisional check of three-body system using perturbation.
+      IF (NN.EQ.3) THEN
+          IF (RX.GT.10.0*RMIN.AND.IESC.GT.0) THEN
+              RD = X4(1,IESC)*XDOT4(1,IESC) + X4(2,IESC)*XDOT4(2,IESC)
+     &                                      + X4(3,IESC)*XDOT4(3,IESC)
+              IF (GPERT.GT.0.001.AND.RD.GT.0.0) THEN
+                  KCASE = -2
+              ELSE
+                  KCASE = 0
+              END IF
+          ELSE IF (GPERT.LT.0.001) THEN
+              KCASE = 0
+          END IF
+      END IF
+*
+*       Include algorithm for NN = 5 (JESC = 0 is easiest).
+      IF (NN.EQ.5.AND.GPERT.GT.0.01) THEN
+*       Set current chain distances and corresponding inverse sorting.
+          R1 = 1.0/RINV(1)
+          R2 = 1.0/RINV(2)
+          R3 = 1.0/RINV(3)
+          R4 = 1.0/RINV(4)
+          CALL HPSORT(NN-1,RINV,ISORT)
+          IF (ISORT(1).EQ.1) THEN
+              IESC = INAME(1)
+              JESC = INAME(2)
+              KCASE = -3
+              IF (R2.LT.0.1*R1) THEN
+                  JESC = 0
+                  RD = X4(1,IESC)*XDOT4(1,IESC)+X4(2,IESC)*XDOT4(2,IESC)
+     &                                         +X4(3,IESC)*XDOT4(3,IESC)
+                  IF (RD.LT.0.0) KCASE = 0
+              END IF
+          ELSE IF (ISORT(1).EQ.4) THEN
+              IESC = INAME(NN-1)
+              JESC = INAME(NN)
+              KCASE = -3
+              IF (R3.LT.0.1*R4) THEN
+                  IESC = JESC
+                  JESC = 0
+                  RD = X4(1,IESC)*XDOT4(1,IESC)+X4(2,IESC)*XDOT4(2,IESC)
+     &                                         +X4(3,IESC)*XDOT4(3,IESC)
+                  IF (RD.LT.0.0) KCASE = 0
+              END IF
+          ELSE IF (ISORT(1).EQ.2) THEN
+              IESC = INAME(1)
+              JESC = INAME(2)
+              KCASE = -3
+          ELSE IF (ISORT(1).EQ.3) THEN
+              IESC = INAME(NN-1)
+              JESC = INAME(NN)
+              KCASE = -3
+          ELSE
+              IESC = 0
+          END IF
+      ELSE IF (NN.EQ.5.AND.(GPERT.GT.0.1.OR.RSUM.GT.20.0*RMIN)) THEN
+*       Ensure membership reduction for large perturbation (any IESC > 0).
+          KCASE = -2
+          IESC = 1
+      ELSE IF (NN.EQ.5) THEN
+          IESC = 0
+      END IF
+*
+*       Include trigger for rare case of NN = 6 (it happened as 3*KS).
+      IF (NN.EQ.6.AND.GPERT.GT.0.01) THEN
+          CALL HPSORT(NN-1,RINV,ISORT)
+          WRITE (6,85)  ISORT(1), GPERT, (1.0/RINV(K),K=1,NN-1)
+   85     FORMAT (' SIX CHAIN    IS GP R ',I4,F7.3,1P,5E10.2)
+          CALL FLUSH(6)
+          KCASE = -2
+          IESC = 1
+      END IF
+*
+*       Avoid repeated ABSORB and ESCAPE by ensuring RD > 0.
+      IF (KCASE.EQ.-3.AND.IESC.GT.0.AND.JESC.EQ.0) THEN
+          RD = X4(1,IESC)*XDOT4(1,IESC) + X4(2,IESC)*XDOT4(2,IESC)
+     &                                  + X4(3,IESC)*XDOT4(3,IESC)
+          IF (RD.LT.0.0) KCASE = 0
+      END IF
+      IF (KCASE.EQ.0) IESC = 0  ! Otherwise different path in CHAIN.
+*
+*       Include inconsistency check.
+      IF (IESC.EQ.0) KCASE = 0
+*
+*       Delay for weakly perturbed higher-order systems inside 30*RMIN.
+      IF (KCASE.LT.0.AND.NN.GE.4) THEN
+          IF (GPERT.LT.0.001.AND.RSUM.LT.30.0*RMIN) KCASE = 0
       END IF
 *
       RETURN

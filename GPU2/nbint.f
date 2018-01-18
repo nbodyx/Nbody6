@@ -328,8 +328,10 @@
             F2 = F2 + FIRR(K)**2
    85    CONTINUE
 *       Employ Jun's criterion to avoid over-shooting (cf. Book, 2.16).
-         DTJ = STEP(I)*(1.0D-06*STEP(I)**2*F2/DV2)**0.1
-         TTMP = MIN(TTMP,DTJ)
+         IF (DV2.GT.0.0D0) THEN
+            DTJ = STEP(I)*(1.0D-06*STEP(I)**2*F2/DV2)**0.1
+            TTMP = MIN(TTMP,DTJ)
+         END IF
       END IF
 *
 *       Select discrete value (increased by 2, decreased by 2 or unchanged).

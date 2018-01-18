@@ -61,7 +61,7 @@
 *
       IF (KZ(30).GT.1) THEN
           WRITE (6,5)  IPAIR, EB, R(IPAIR), GAMMA(IPAIR), DPHI, K
-    5     FORMAT (' RENEW:    KS =',I3,'  EB =',F8.2,'  R =',1P,E8.1,
+    5     FORMAT (' RENEW:    KS =',I4,'  EB =',F8.2,'  R =',1P,E8.1,
      &            '  G =',E8.1,'  DPHI =',E8.1,'  DT/TK =',0P,I4)
       END IF
 *

@@ -37,6 +37,7 @@
 *
 *       Determine the largest perturbing force (M/R**3).
    20 PMAX = 0.0
+      RMAX2 = 1.0D+06
       NNB = LIST(1,ICM)
       DO 30 L = 2,NNB+1
           J = LIST(L,ICM)
@@ -45,6 +46,9 @@
           PIJ = BODY(J)/(RIJ2*SQRT(RIJ2))
           IF (PIJ.GT.PMAX) THEN
               PMAX = PIJ
+          END IF
+          IF (RIJ2.LT.RMAX2) THEN
+              RMAX2 = RIJ2
           END IF
    30 CONTINUE
 *
@@ -58,6 +62,9 @@
           GSTAR = 0.01*GMAX
       END IF
       RMAXS(ISUB) = (100.0*GSTAR*BODY(ICM)/(2.0*PMAX))**0.3333
+*       Set limit of c.m. approximation for triples/quads.
+      IF (ISYS(ISUB).LE.2)
+     &    RMAXS(ISUB) = MIN(RMAXS(ISUB), SQRT(RMAX2/CMSEP2))
 *
 *       Update time limit interval unless termination has been signalled.
       IF (STEPS(ISUB).GT.0.0D0) THEN

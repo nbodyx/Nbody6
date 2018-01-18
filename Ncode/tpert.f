@@ -10,6 +10,7 @@
 *
 *       See whether irregular time-step can replace full loop.
       I = N + IPAIR
+      JCLOSE = 0
       SEMI = -0.5*BODY(I)/H(IPAIR)
       TK = TWOPI*SEMI*SQRT(SEMI/BODY(I))
       IF (STEP(I).GT.TK) THEN
@@ -20,7 +21,6 @@
 *       Initialize scalars.
       FMAX = 0.0
       DTIN = 1.0E+20
-      JCLOSE = 0
       NNB1 = LIST(1,I) + 1
 *
 *       Check rare case of no neighbours.

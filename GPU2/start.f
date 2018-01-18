@@ -130,10 +130,34 @@
       CALL FPOLY0(RS0)
 *
 *       Initialize force polynomials and time-steps (standard way).
-      CALL FPOLY2(IFIRST,NTOT,0)
+!$omp parallel do private(I)
+      DO 55 I=IFIRST,NTOT
+          CALL FPOLY2(I,I,0)
+   55 ENDDO
+!$omp end parallel do
 *
 *       Generate perturber lists for primordial binaries.
       CALL KSPINIT
+*
+*       Search other binaries
+      RMIN2 = RMIN**2
+      RMIN22 = 4.0*RMIN2
+      I = N
+   99 IKS = 0
+      IF (STEP(I).LT.DTMIN) THEN
+          CALL SEARCH(I,IKS)
+          IF (IKS.GT.0) THEN
+              IF (ICOMP.GT.JCOMP) THEN
+                  ITMP = ICOMP
+                  ICOMP = JCOMP
+                  JCOMP = ITMP
+              END IF
+              CALL KSREG
+              GO TO 99
+          END IF
+      END IF
+      I = I - 1
+      IF (I.GT.IFIRST) GO TO 99
 *
 *       Include optional regularization of primordial triples.
       IF (KZ(18).GT.1.AND.NHI0.GT.0) THEN

@@ -5,7 +5,7 @@
 *       -----------------------------------------
 *
 *     INCLUDE 'COMARC.CH'
-      INCLUDE 'ARCCOM2e2.CH'
+      INCLUDE 'ARCCOM2e2.ch'
 *
 *
 *       Determine indices of dominant motion.

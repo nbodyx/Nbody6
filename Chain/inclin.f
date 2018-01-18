@@ -31,10 +31,15 @@
           A1A2 = A1A2 + A0(K)*A2(K)
    20 CONTINUE
 *
-*       Determine inclination in radians.
+*       Determine inclination in radians within both limits.
       FAC = A1A2/SQRT(A12*A22)
-      FAC = MIN(FAC,1.0D0)
-      ALPHA = ACOS(FAC)
+      IF (FAC.GE.1.0d0) THEN
+          ALPHA = 0d0
+      ELSE IF (FAC.LE.-1.0d0) THEN
+          ALPHA = ACOS(-1.0d0)
+      ELSE
+          ALPHA = ACOS(FAC)
+      ENDIF
 *
       RETURN
 *

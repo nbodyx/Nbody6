@@ -1,14 +1,14 @@
       SUBROUTINE UNPERT(IPAIR,KCASE)
 *
-*
 *       Unperturbed two-body motion.
 *       ----------------------------
 *
       INCLUDE 'common6.h'
       COMMON/KSPAR/  ISTAT(KMAX)
       REAL*8  UI(4),UIDOT(4)
-      SAVE TCALL
+      SAVE TCALL,JCL
       DATA TCALL /0.0D0/
+!$omp threadprivate(JCL)
 *
 *
 *       Set first component & c.m. index and semi-major axis.
@@ -59,9 +59,8 @@
 *       Evaluate interval for unperturbed motion (GAMMA < GMIN).
     9 KPERT = 1
       IP = IPAIR
-*       Copy JCL from IPAIR and restore value (thread-safe procedure).
-      CALL TPERT(IPAIR,GMIN,DT)
-      JCL = IPAIR
+*       Determine new perturber index (thread-safe procedure).
+      CALL TPERT(IPAIR,GMIN,DT,JCL)  ! Only thread-safe with SAVE JCL (2/17).
       IPAIR = IP
 *
 *       Restore KS indicator and re-initialize if interval < period.

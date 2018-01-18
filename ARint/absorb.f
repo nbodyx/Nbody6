@@ -19,6 +19,7 @@
      &                NAMES(NCMAX,5),ISYS(5)
       COMMON/CCOLL2/  QK(NMX4),PK(NMX4),RIK(NMX,NMX),SIZE(NMX),VSTAR1,
      &                ECOLL1,RCOLL,QPERI,ISTAR(NMX),ICOLL,ISYNC,NDISS1
+      COMMON/ARZERO/  ISTAR0(NMX),SIZE0(NMX)
       COMMON/SOFT/  EPS2
       REAL*8  XCM(3),VCM(3)
       REAL*8  X0S(3),V0S(3),XS(3),VS(3),X20S(3),V20S(3)
@@ -26,16 +27,23 @@
 *
 *       Define discrete time for new polynomial (DT2 < 0 is OK).
       TIME0 = TIME
-      TIMET = TIME
-      TIME = T0S(ISUB) + TIMEC
       TIME = TBLOCK
+*     TIME = TPREV
+*     DT8 = (TBLOCK - TPREV)/8.0
+*     IF (DT8.EQ.0.0) DT8 = STEP(ICH)/8.0
+*     DT = DT8
+*     CALL STEPK(DT,DT8)
+*     TIME = TPREV + DT8
+*     WRITE (6,990)  TIME, DT8, TIME-TIME0
+* 990 FORMAT (' ABSORB   T DT8 T-T0 ',F12.6,1P,2E12.4)
+* 999 IF (TIME.LT.TIME0) THEN
+*         TIME = TIME + DT8
+*     WRITE (6,995)  TIME
+* 995 FORMAT (' NEW TIME  ',F12.6)
+*         GO TO 999
+*     END IF
 *       Re-define initial epoch for consistency (ignore phase error).
 ***   T0S(ISUB) = TIME - TIMEC  !looks dangerous!!!
-*
-      IF (KZ(30).GT.2) THEN
-          WRITE (6,1)  TIME0+TOFF, TIME+TOFF, TBLOCK
-    1     FORMAT (' ABSORB:   TIME0 TIME TBLOCK ',3F10.6)
-      END IF
 *
       ZM0S = BODY(ICH)
       ZM20S = BODY(JCLOSE)
@@ -50,11 +58,9 @@
       NCH0 = NCH
       MASS = MASS + BODY(JCLOSE)
       CALL SETSYS
-      INAME(NCH) = NCH
 *
 *       Improve coordinates & velocities of c.m. body to order F3DOT.
       CALL XVPRED(ICH,-1)
-*     TIME = TIMET
 *
       SUM = 0.0
       DO 5 K = 1,3
@@ -88,6 +94,8 @@
           J = JLIST(L)
           SIZE(L) = RADIUS(J)
           ISTAR(L) = KSTAR(J)
+          SIZE0(L) = SIZE(L)
+          ISTAR0(L) = ISTAR(L)
           DO 25 K = 1,3
               LK = LK + 1
               XCH(LK) = X(K,J) - XCM(K)
@@ -227,6 +235,15 @@
 *     WRITE (6,99)  (CM(K),K=1,6)
 *  99 FORMAT (' ABSORB:   CM ',1P,6E9.1)
 *     CALL FLUSH(6)
+*     CALL FindChainIndices
+*     CALL INITIALIZE XC and WC
+      RSUM = 0.0
+      NN = NCH
+*       Replace possible zero value by 1/2*RMIN (only NCH > 4 needed).
+      IF (NCH.GT.4) RINV(NCH-1) = 0.5/RMIN
+      DO 110 K = 1,NCH-1
+          RSUM = RSUM + 1.0/RINV(K)
+  110 CONTINUE
 *
       RETURN
 *

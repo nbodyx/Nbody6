@@ -10,6 +10,7 @@
 *       Form square neighbour radius.
       RS2 = RS0**2
       ILIST(1) = 0
+      ITER = 0
 *
 *       Modify initial radius for Plummer or King-Michie models.
       IF (KZ(5).GT.0.OR.KZ(22).GE.2) THEN
@@ -84,6 +85,16 @@
 *       Double the neighbour sphere and try again.
           RS2 = 1.59*RS2
           NBVOID = NBVOID + 1
+          ITER = ITER + 1
+*       Save two arbitrary neighbours after 10 iterations.
+          IF (ITER.GE.10) THEN
+              II = I
+              IF (I.GT.N - 3) II = IFIRST
+              LIST(2,I) = II + 1
+              LIST(3,I) = II + 2
+              LIST(1,I) = 2
+              GO TO 25
+          END IF
           GO TO 1
       ELSE IF (NNB.GE.NNBMAX) THEN
 *       Reduce neighbour sphere but avoid possible looping.
@@ -101,6 +112,6 @@
           LIST(L,I) = ILIST(L)
    20 CONTINUE
 *
-      RETURN
+   25 RETURN
 *
       END

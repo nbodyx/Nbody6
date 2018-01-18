@@ -54,13 +54,17 @@
       MASS = MASS - M(IESC)
 *
 *       Improve coordinates & velocities of c.m. body to order F3DOT.
-      CALL XVPRED(ICH,-1)
+      IF (ABS(TIME-T0(ICH)).LE.STEP(ICH)) THEN
+          CALL XVPRED(ICH,-1)
+      END IF
 *
 *       Predict X & XDOT of pertubers to order FDOT.
       NB1 = LISTC(1) + 1
       DO 15 L = 2,NB1
           J = LISTC(L)
-          CALL XVPRED(J,-2)
+          IF (ABS(TIME-T0(J)).LE.STEP(J)) THEN
+              CALL XVPRED(J,-2)
+          END IF
    15 CONTINUE
 *
 *       Set new c.m. for reduced system and save old c.m. variables.

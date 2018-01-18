@@ -1,6 +1,7 @@
 FC = gfortran -fPIC
 FFLAGS = -Wall -O3 -ffast-math
-#FFLAGS +=  -O3 -fbounds-check
+#FFLAGS +=  -O0 -fbounds-check
+#FLAGS +=  -O3 -fbounds-check
 #FFLAGS = -g -O0
 #FFLAGS +=  -traceback
 #FFLAGS +=  -pg
@@ -12,12 +13,14 @@ endif
 
 LIBCUDA = -L /usr/local/cuda/lib64 -lcudart
 
-LD_GPU = gfortran -lstdc++ -fopenmp $(LIBCUDA)
-LD_GPU += -fPIC
-LD_GPU += -B /usr/share/libhugetlbfs -Wl,--hugetlbfs-link=B
+GC = gfortran
 
-LD_SSE = gfortran -lstdc++ -fopenmp
-LD_SSE += -B /usr/share/libhugetlbfs -Wl,--hugetlbfs-link=B
+LD_GPU = -fopenmp $(LIBCUDA) -lstdc++
+LD_GPU += -fPIC
+#LD_GPU += -B /usr/share/libhugetlbfs -Wl,--hugetlbfs-link=B
+
+LD_SSE = -fopenmp -lstdc++
+#LD_SSE += -B /usr/share/libhugetlbfs -Wl,--hugetlbfs-link=B
 
 #default value of chainmode is chain
 chainmode ?= chain
@@ -126,8 +129,8 @@ endif
 
 ifeq ($(chainmode), archain)
 SOURCE += \
-arc.f cfuncs.f chain.f chstab.f cstab2.f cstab4.f emax1.f erel.f grbin.f \
-hpsort.f inclin.f ksphys.f physks.f pnpert.f r2sort.f \
+arc.f chain.f chstab.f cstab2.f cstab3.f cstab4.f emax1.f erel.f \
+grbin.f hpsort.f inclin.f ksphys.f physks.f pnpert.f r2sort.f \
 absorb.f bhstab.f bhstat.f chdata.f chfind.f chfirr.f chinit.f chlist.f \
 chmod.f chpert.f chpot.f chterm2.f chterm.f const.f cpertj.f cpertx.f \
 decorr.f expel2.f fchain.f ffdot.f ghost.f infall.f inject.f kcpert.f \
@@ -145,10 +148,10 @@ OBJECTS = $(SOURCE:.f=.o)
 OBJECTS += gpuirr.o gpunb.o gpupot.o wtime.o cnbint.o cxvpred.o
 
 gpu: $(OBJECTS)
-	$(LD_GPU) $(FFLAGS) $(OBJECTS) -o nbody6
+	$(GC) $(FFLAGS) $(OBJECTS) $(LD_GPU) -o nbody6
 
 sse: $(OBJECTS)
-	$(LD_SSE) $(FFLAGS) $(OBJECTS) -o nbody6
+	$(GC) $(FFLAGS) $(OBJECTS) $(LD_SSE) -o nbody6
 
 clean:
 	rm -f *.o

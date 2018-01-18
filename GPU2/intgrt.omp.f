@@ -14,14 +14,14 @@
       PARAMETER (NIMAX=1024,NPMAX=16)
       REAL*8   H2I(NIMAX),XI(3,NIMAX),VI(3,NIMAX),GPUACC(3,NIMAX),
      &         GPUJRK(3,NIMAX),GPUPHI(NIMAX),GF(3,NMAX),GFD(3,NMAX),
-     &         DTR(NIMAX)
+     &         DTR(NIMAX),XNEW(3,NMAX),XDNEW(3,NMAX)
       INTEGER  NXTLST(NMAX),LISTQ(NMAX),NL(20)
       INTEGER  IRR(NMAX),IREG(NMAX),LISTGP(LMAX,NIMAX)
       LOGICAL LOOP,LSTEPM
       SAVE IQ,ICALL,NQ,LQ,LOOP,LSTEPM,STEPM,ISAVE,JSAVE,ISTART,TBH
       DATA IQ,ICALL,LQ,LOOP,LSTEPM,STEPM /0,2,11,.TRUE.,.FALSE.,0.03125/
       DATA ISAVE,JSAVE,ISTART /0,0,0/
-      SAVE TLISTQ,TMIN,ICOMP0,JCOMP0,NPACT,GF,GFD
+      SAVE TLISTQ,TMIN,ICOMP0,JCOMP0,NPACT,GF,GFD,XNEW,XDNEW
       SAVE NXTLST,LISTQ,IRR,IREG,LISTGP,ISTAT
 *     SAVE CPRED,CPRED2,CPRED3
 *     DATA CPRED,CPRED2,CPRED3 /0.0D0,0.0D0,0.0D0/
@@ -60,7 +60,7 @@
       END IF
 *
 *       Search for high velocities after escape or KS/chain termination.
-  999 IF (IPHASE.EQ.-1.OR.IPHASE.GE.2) THEN
+  999 IF (KZ(37).GT.0.AND.(IPHASE.EQ.-1.OR.IPHASE.GE.2)) THEN
           CALL HIVEL(0)
       END IF
 *
@@ -159,7 +159,7 @@
 *
 *       Determine level for the smallest step (ignore extreme values).
       LQS = 20
-      DO 1050 L = 6,20
+      DO 1050 L = 10,20
           IF (DTM.EQ.DTK(L)) THEN
               LQS = L
           END IF
@@ -378,10 +378,10 @@
       TMIN = 1.0D+10
       IKS0 = IKS
 *
-*       Predict chain variables and perturbers at new block-time.
+*       Predict chain c.m. only at new block-time.
       IF (NCH.GT.0) THEN
           CALL JPRED(ICH)
-          CALL XCPRED(2)
+*         CALL XCPRED(2)
       END IF
 *
 *       Evaluate all irregular forces & derivatives in the GPUIRR library.
@@ -418,19 +418,26 @@
 *       Initialize array for repeated calls to ensure thread-safe procedure.
               ISTAT(II) = -1
               I = NXTLST(II)
-              CALL NBINTP(I,IRR(II),GF(1,II),GFD(1,II),ISTAT(II))
+              CALL NBINTP(I,IRR(II),GF(1,II),GFD(1,II),ISTAT(II),
+     &                    XNEW(1,II),XDNEW(1,II))
 *       Note that rejected parallel part contains few operations.
    50     CONTINUE
 !$omp end parallel do
-*
-*       Correct the irregular steps sequentially for rare cases.
           IPHASE = 0
           IKS = 0
+*       Examine all block members for irregular steps or X0 & X0DOT copy.
           DO 500 II = 1,NXTLEN
+              I = NXTLST(II)
               IF (ISTAT(II).GT.0) THEN
-                  I = NXTLST(II)
 *       Correct exceptional irregular steps in serial.
                   CALL NBINT(I,IKS,IRR(II),GF(1,II),GFD(1,II))
+              ELSE
+*       Copy new position and velocity.
+                  T0(I) = TIME
+                  DO 490 K=1,3
+                      X0(K,I) = XNEW(K,II)
+                      X0DOT(K,I) = XDNEW(K,II)
+  490             CONTINUE
               END IF
   500     CONTINUE
       END IF
@@ -551,6 +558,16 @@
               TMIN = TNEW(I)
           END IF
   350 CONTINUE
+*
+*       Enlarge search to LISTQ members in extremely rare case of NXTLEN = 1.
+      IF (NXTLEN.EQ.1) THEN
+          DO 355 L = 1,NQ      ! Note this actually happend in 2 runs (08/16).
+              J = LISTQ(L)
+              IF (TNEW(J).LT.TMIN) THEN
+                  TMIN = TNEW(J)
+              END IF
+  355     CONTINUE
+      END IF
 *
 *       Copy current coordinates & velocities from corrected values, IQ.NE.0.
       IF (IKS.GT.0.OR.IQ.NE.0.OR.TIME.GE.TADJ.OR.TIME.GE.TNEXT.OR.

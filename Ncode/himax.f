@@ -107,10 +107,10 @@
       EMAX = SQRT(EMAX)
 *
 *       Form minimum eccentricity (Douglas Heggie, Sept. 1996).
-      AZ = A**2 + Z - 2.0
-      IF (AZ.GE.0.0) THEN
+      AZ2 = A**2 + Z - 2.0
+      IF (AZ2.GE.0.0) THEN
           AZ1 = 1.0 + Z - 4.0*A**2
-          EMIN2 = ONE6*(AZ1 - SQRT(AZ1**2 - 12.0*AZ))
+          EMIN2 = ONE6*(AZ1 - SQRT(AZ1**2 - 12.0*AZ2))
       ELSE
           EMIN2 = 1.0 - 0.5*(A**2 + Z)
       END IF

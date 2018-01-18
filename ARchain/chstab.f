@@ -9,11 +9,13 @@
       COMMON/ARCHAIN/X(NMX3),V(NMX3),WTTL,M(NMX),
      &   XCDUM(NMX3),WCDUM(NMX3),MC(NMX),
      &   XI(NMX3),VI(NMX3),MASS,RINV(NMXm),RSUM,INAME(NMX),N
-      COMMON/CHREG/  TIMEC,TMAX,RMAXC,CM(10),NAMEC(6),NSTEP1,KZ27,KZ30
+      COMMON/CHREG/  TIMEC,TMAX,RMAXC,CM(10),NAMEC(NMX),NSTEP1,KZ27,KZ30
       COMMON/CPERT/  RGRAV,GPERT,IPERT,NPERT
       REAL*8  M,MB,MB1,MC,R2(NMX,NMX),XCM(3),VCM(3),XX(3,3),VV(3,3),
      &        A1(3),A2(3),XREL(3),VREL(3),EI(3),HI(3),HO(3),MASS
       INTEGER  IJ(NMX)
+      DATA ITIME /0/
+      SAVE
 *
 *
 *       Sort particle separations (I1 & I2 form closest pair).
@@ -23,6 +25,7 @@
       I3 = IJ(3)
       MB = M(I1) + M(I2)
       MB1 = MB + M(I3)
+      ITERM = 0
 *
 *       Form output diagnostics.
       VREL2 = 0.0D0
@@ -59,6 +62,7 @@
       SEMI1 = 1.0/SEMI1
       ECC1 = SQRT((1.0D0 - R3/SEMI1)**2 + RDOT3**2/(SEMI1*MB1))
       PMIN = SEMI1*(1.0D0 - ECC1)
+      IF (ECC1.GT.1.0) GO TO 50
 *
 *       Form hierarchical stability ratio (Eggleton & Kiseleva 1995).
 *     QL = MB/M(I3)
@@ -78,7 +82,9 @@
 *
 *       Evaluate the general stability function (Valtonen 2015).
       IF (ECC1.LT.1.0.AND.ECC.LT.1.0) THEN
-          QST = QSTAB(ECC,ECC1,ALPHA,M(I1),M(I2),M(I3))
+          ZM1 = M(I1)
+          ZM2 = M(I2)
+          QST = QSTAB(ECC,ECC1,ALPHA,ZM1,ZM2,M(I3))
           IF (QST*SEMI.LT.PMIN) THEN
               PCRIT = 0.99*PMIN
           ELSE
@@ -147,27 +153,26 @@
       EMAX = SQRT(EMAX)
 *
 *       Check hierarchical stability condition for bound close pair (RB > a).
-      ITERM = 0
       ALPHA = 180.0*ALPHA/3.1415
       IF (PMIN.GT.PCRIT.AND.SEMI.GT.0.0.AND.SEMI1.GT.0.0.AND.
-     &    RB.GT.SEMI) THEN
-*       Delay termination until perturbation < 10^{-6} (includes CHAIN B-B).
-          IF (R3.GT.SEMI1.AND.GPERT.LT.1.0D-06) THEN
-      IF (SEMI1.LT.100.0*SEMI) THEN
+     &    RDOT3.GT.0.0.AND.RB.GT.SEMI) THEN
+*       Delay termination until perturbation < 10^{-5} (includes CHAIN B-B).
+          IF (R3.GT.SEMI1.AND.GPERT.LT.5.0D-04.AND.EMAX.LT.0.9999) THEN
           ITERM = -1
           WRITE (6,20)  NAMEC(I1), NAMEC(I2), NAMEC(I3), ECC, EMAX,
-     &                  ECC1, SEMI, SEMI1, PMIN, ALPHA, GPERT
+     &                  ECC1, SEMI, SEMI1, PMIN, ALPHA, QST, GPERT
    20     FORMAT (' NEW HIARCH    NM =',3I6,'  E =',F6.3,'  EX =',F7.4,
      &                         '  E1 =',F6.3,'  A =',1P,E8.1,
      &                         '  A1 =',E8.1,'  PM =',E9.2,
-     &                         '  IN =',0P,F7.1,'  G =',F7.3)
+     &                         '  IN =',0P,F7.1,'  QST =',F5.1,
+     &                         '  G =',1P,E9.1)
+          CALL FLUSH(6)
           RI = SQRT(CM(1)**2 + CM(2)**2 + CM(3)**2)
           Q0 = M(I3)/MB
           WRITE (81,30)  TIMEC, RI, NAMEC(I3), Q0, ECC, EMAX, ECC1,
      &                   SEMI, SEMI1, PCRIT/PMIN, ALPHA
    30     FORMAT (2F8.4,I6,F6.2,3F6.3,1P,2E10.2,0P,F5.2,F8.1)
           CALL FLUSH(81)
-          END IF
           END IF
 *       Include termination test for wide triple system (exclude ECC1 > 0.9).
       ELSE IF (PMIN.GT.3.0*SEMI*(1.0 + ECC).AND.SEMI.GT.0.0.AND.
@@ -189,6 +194,6 @@
           ITERM = -1
       END IF
 *
-      RETURN
+   50 RETURN
 *
       END

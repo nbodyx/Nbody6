@@ -139,42 +139,26 @@
           END IF
    20 CONTINUE
 *
-*       Quantize the elapsed interval since last step (note: none at TBLOCK).
-      TIME2 = T0S(ISUB) + TIMEC - TPREV
-      DT8 = (TBLOCK - TPREV)/8.0D0
-*
-*       Adopt the nearest truncated step (at most 8 subdivisions).
-      DT2 = TIME2
-      IF (TIME2.GT.0.0D0) THEN
-          CALL STEPK(DT2,DTN2)
-          DTN = NINT(DTN2/DT8)*DT8
-*     ELSE
-*       Choose negative step if pericentre time < TPREV (cf. iteration).
-*         DT2 = -DT2            ! Warning! May be zero (SJA 04/16).
-*         CALL STEPK(DT2,DTN2)
-*         DTN = -NINT(DTN2/DT8)*DT8
-      END IF
-*
-*       Update time for new polynomial initializations (also for CMBODY).
-      TIME = TPREV + DTN
-*       Adopt block time in rare case of DT2 reduced to SMAX.
-***   IF (DTN.LE.SMAX) TIME = TBLOCK
-*
 *       Set TIMEC for collision to preserve TIME2 after T0S = TIME in SUBSYS.
       IF (ITERM.LT.0.0) TIMEC = T0S(ISUB) + TIMEC - TIME
 *
-*       Restrict TIME to current block-step and save for use by KSPERI.
-      TIME = MIN(TBLOCK,TIME)
-      TIME = TBLOCK         ! Adopt safety first condition.
+*       Restrict TIME to current block-step T0(ICH) and save for KSPERI.
+      TIME = T0(ICH)
+      TIME = MIN(TIME,TBLOCK)
       TIME0 = TIME
 *
-*       Predict current X & XDOT for c.m. and neighbours to order F3DOT.
-      CALL XVPRED(ICM,-1)
+*       Predict current X & XDOT for c.m. and neighbours using safety test.
+      IF (TIME - T0(ICM).LE.STEP(ICM)) THEN
+          CALL XVPRED(ICM,-1)
+      END IF
+*
       NNB1 = LIST(1,ICH) + 1
       DO 25 L = 2,NNB1
 *       Note possibility T0(J) = TIME in routine REDUCE would skip on -2.
           J = LIST(L,ICH)
-          CALL XVPRED(J,-1)
+          IF (ABS(TIME-T0(J)).LE.STEP(J)) THEN
+              CALL XVPRED(J,-1)
+          END IF
    25 CONTINUE
 *
 *       Copy c.m. coordinates & velocities.

@@ -37,6 +37,8 @@
       JDUM = 0
       DO 30 L = 2,NPC
           J = LISTC(L)
+*       Ensure current perturber prediction (SJA 8/2016).
+          CALL JPRED(J)
           DX(1) = X(1,J) - XI(1)
           DX(2) = X(2,J) - XI(2)
           DX(3) = X(3,J) - XI(3)

@@ -184,6 +184,7 @@
               ETIDE = ETIDE + BODY(I)*(0.5*W2DOT*DTR - WDOT)*DTR
           END IF
 *       Skip another full N loop (necessary for GPU/OpenMP case).
+          FR2 = 0.0
           GO TO 70
       END IF
 *
@@ -429,7 +430,9 @@
               IF (STEP(J).LT.DTMIN) JMIN = J
           END IF
 *       Avoid adding a neighbour for c.m. body (CMFIRR inconsistency).
-*         IF (I.GT.N) JMIN = 0
+*         IF (I.GT.N) THEN
+*             IF (LIST(1,I1).GT.0) JMIN = 0
+*         END IF
       END IF
 *
 *       See whether the last location has been checked.
@@ -594,7 +597,18 @@
 *
 *       Obtain new regular integration step using composite expression.
 *       STEPR = (ETAR*(F*F2DOT + FDOT**2)/(FDOT*F3DOT + F2DOT**2))**0.5.
-      TTMP = TSTEP(FREG,FDR,D2R(1,I),D3R(1,I),ETAR)
+      IF (NNB.GT.0) THEN
+          TTMP = TSTEP(FREG,FDR,D2R(1,I),D3R(1,I),ETAR)
+      ELSE
+          FFR = 0.0
+          DER2 = 0.0
+          DO 85 K = 1,3
+              FFR = FFR + FREG(K)**2
+              DER2 = DER2 + D2R(K,I)**2
+   85     CONTINUE
+          TFAC = SQRT(FFR/DER2)
+          TTMP = SQRT(ETAR*TFAC)
+      END IF
 *
 *       Impose a smooth step reduction inside compact core (superseded).
 *     IF (NC.LT.50.AND.RI2.LT.RC22) THEN
@@ -630,7 +644,7 @@
       END IF
 *
 *       Include convergence test for increasing step (Makino, ApJ, 369, 200).
-      IF (TTMP.GT.0.1.AND.TTMP.GT.DTR) THEN
+      IF (TTMP.GT.0.1.AND.TTMP.GT.DTR.AND.FR2.GT.0.0) THEN
           DV2 = 0.0
           DO 90 K = 1,3
               DV2 = DV2 + (XIDOT(K) - X0DOT(K,I))**2
@@ -655,10 +669,10 @@
 *         END IF
 *     END IF
 *
-*     IF (DT0.LT.0.05*STEPR(I)) THEN
+*     IF (DT0.LT.0.01*STEPR(I)) THEN
 *     WRITE (6,120)  NAME(I),NBGAIN,NBLOSS,NNB,TIME,STEPR(I),DT0
 * 120 FORMAT (' SHRINK!    NBG NBL NB T SR DT0  ',
-*    &                     4I6,F8.3,1P,6E10.2)
+*    &                     I6,2I4,I5,F10.5,1P,6E10.2)
 *     CALL FLUSH(6)
 *     END IF
 *
@@ -674,6 +688,7 @@
           IF (DV2.GT.0.01*VI2) THEN
               STEP(I) = STEP(I)/8.0D0
               STEPR(I) = 0.5*STEPR(I)
+              TNEW(I) = T0(I) + STEP(I)
           END IF
       END IF
 *

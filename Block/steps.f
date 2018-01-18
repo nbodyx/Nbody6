@@ -29,7 +29,11 @@
 *
 *       Convert predicted step to nearest block time-step (truncated down).
           CALL STEPK(DT,DTN)
-          CALL STEPK(DTR,DTRN)
+          VI2 = XDOT(1,I)**2 + XDOT(2,I)**2 + XDOT(3,I)**2
+          VI2 = MAX(VI2,0.5)
+          DT0 = 0.5*RS(I)/SQRT(VI2)
+          DT = MIN(DT0,SMAX)
+          CALL STEPK(DT,DTRN)
           IF (TIME.LE.0.0D0) THEN
               STEP(I) = DTN
               STEPR(I) = DTRN

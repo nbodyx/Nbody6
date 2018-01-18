@@ -12,10 +12,10 @@
      &                NAMES(NCMAX,5),ISYS(5)
       COMMON/CONNECT/  TIME_CH
       CHARACTER*8  WHICH1
-      REAL*8  XX(3,3),VV(3,3)
+      REAL*8  XX(3,3),VV(3,3),XCM(3)
       INTEGER LISTQ(100)
-      SAVE LISTQ,QCHECK
-      DATA IZARE,LISTQ(1),QCHECK /0,0,0.0D0/
+      SAVE LISTQ,QCHECK,INC0
+      DATA IZARE,LISTQ(1),INC0,QCHECK /0,0,0,0.0D0/
 *
 *
 *       Set index of KS pair & both components of c.m. body #I.
@@ -28,6 +28,7 @@
       JCL = IFIRST
       KS2 = 0
       RMAX2 = 1.0
+      RJMIN2 = 1.0
       TTOT = TIME + TOFF
       RI2 = (X(1,I) - RDENS(1))**2 + (X(2,I) - RDENS(2))**2 +
      &                               (X(3,I) - RDENS(3))**2
@@ -53,6 +54,7 @@
           PERT = BODY(J)/(RIJ2*SQRT(RIJ2))
           IF (PERT.GT.PERT2) THEN 
               IF (PERT.GT.PERT1) THEN
+                  RMAX2 = RJMIN2
                   RJMIN2 = RIJ2
                   JMAX = JCL
                   JCL = J
@@ -110,6 +112,7 @@
       ECC2 = (1.0D0 - R(IPAIR)/SEMI)**2 + TDOT2(IPAIR)**2/(BODY(I)*SEMI)
       ECC = SQRT(ECC2)
       APO = ABS(SEMI)*(1.0 + ECC)
+*     IF (SEMI.LT.2.0D-07) GO TO 100
 *
 *       Quit on hyperbolic orbit with large impact parameter.
       IF (ECC1.GT.1.0.AND.PMIN.GT.50.0*SEMI) GO TO 100
@@ -231,9 +234,7 @@
       END IF
 *
 *       Adopt triple, quad or chain regularization for strong interactions.
-*     IF ((APO.GT.0.01*RMIN.OR.JCL.GT.N).AND.PMIN.GT.APO) GO TO 30
-      IF ((APO.GT.0.01*RMIN.OR.JCL.GT.N).AND.PMIN.GT.1.5*APO) GO TO 30
-*     IF (APO.LE.0.01*RMIN.AND.PMIN.GT.2.0*APO) GO TO 30
+*     IF ((APO.GT.RMIN.OR.JCL.GT.N).AND.PMIN.GT.2.0*APO) GO TO 30
       IF ((RIJ.GT.RMIN.AND.SEMI1.GT.0.0).OR.RIJ.GT.2.0*RMIN) GO TO 100
       IF (PERTM.GT.100.0*GSTAR) GO TO 30
    16 IF (JCL.GT.N.AND.PMIN.GT.0.1*RMIN) THEN
@@ -279,6 +280,7 @@
           IF (IGO.GT.0) GO TO 100
       END IF
 *
+*       Include any close single or c.m. perturber (cf. routine SETSYS).
 *       Skip all multiple regs on zero option (mergers done by #15 > 0).
       IF (KZ(30).EQ.0) GO TO 100
 *       Allow CHAIN only (#30 = -1) or TRIPLE & QUAD only (#30 < -1).
@@ -286,9 +288,29 @@
 *
       WHICH1 = ' TRIPLE '
       IF (JCL.GT.N) WHICH1 = ' QUAD   '
+      IF (JCL.GT.N) GO TO 100
       IF (KCHAIN.GT.0) THEN
-*         IF (TTOT.LT.TIME_CH) GO TO 100
+          IF (TTOT.LE.TIME_CH) GO TO 100
           WHICH1 = ' CHAIN  '
+      ELSE
+*       Check validity of c.m. approximation.
+          DO 165 K = 1,3
+              XCM(K) = (BODY(I)*X(K,I) + BODY(JCL)*X(K,JCL)) /
+     &                 (BODY(I) + BODY(JCL))
+  165     CONTINUE
+          JNR = 0  ! Nearest body
+          RNR2 = 1000.0
+          DO 17 L = 1,NP
+              J = JLIST(L)
+              IF (J.EQ.JCL) GO TO 17
+              RIJ2 = (XCM(1) - X(1,J))**2 + (XCM(2) - X(2,J))**2 +
+     &                                      (XCM(3) - X(3,J))**2
+              IF (RIJ2.LT.RNR2) THEN 
+                  RNR2 = RIJ2
+                  JNR = J
+              END IF
+   17     CONTINUE
+          IF (JNR.GT.0.AND.RNR2.LT.RJMIN2*CMSEP2) GO TO 100
 *       Set increased time for next CHAIN (here and in KSINT).
           TIME_CH = TTOT + 0.001
       END IF
@@ -311,13 +333,12 @@
       END IF
 *
 *       Include any close single or c.m. perturber (cf. routine SETSYS).
-      IF (JMAX.NE.JCL.AND.SQRT(RMAX2).LT.MIN(2.0D0*RSUM,RMIN).AND.
-     &    NAME(JMAX).GT.0) THEN
+      IF (JMAX.NE.JCL.AND.SQRT(RMAX2).LT.RMIN.AND.NAME(JMAX).GT.0) THEN
           IF (JCL.GT.N.AND.JMAX.GT.N) THEN
               JCMAX = 0
           ELSE
-              WRITE (6,21)  NAME(JCL), NAME(JMAX), RSUM, SQRT(RMAX2)
-   21         FORMAT (' B+2 CHAIN    NAM RSUM RMX ',2I7,1P,2E10.2)
+              WRITE (6,21)  NAME(JCL), NAME(JMAX), SQRT(RMAX2)
+   21         FORMAT (' B+2 CHAIN    NAM RMX ',2I7,1P,E10.2)
               CALL XVPRED(JMAX,-1)
               JCMAX = JMAX
           END IF
@@ -348,9 +369,9 @@
                   IPAIR = KPAIR
                   JCLOSE = N + JPAIR
                   JCL = JCLOSE
+                  I1 = 2*IPAIR - 1
+                  J1 = 2*JPAIR - 1
               END IF
-*       Check reduction of c.m. index (JPAIR becomes JPAIR - 1 if > IPAIR).
-              IF (JPAIR.GT.IPAIR) JCLOSE = JCLOSE - 1
 *       Include extra condition for inert binary approximation (9/3/12).
               IF (KZ(26).LT.2.AND.RIJ.GT.250.0*SEMI0) THEN
 *       Replace unperturbed near-synchronous binary by inert body in CHAIN.
@@ -383,12 +404,6 @@
           ELSE
               KS2 = JPAIR
           END IF
-          IF (KZ(27).LE.0.AND.JPAIR.GT.IPAIR) THEN
-              IF (JCLOSE.GT.0) JCLOSE = JCLOSE - 1
-          END IF
-*       Terminate smallest pair first and reduce second index if higher.
-*         CALL KSTERM
-          IF (KS2.GT.KSPAIR) KS2 = KS2 - 1
       END IF
 *
 *       See whether chain regularization indicator should be switched on.
@@ -563,6 +578,8 @@
    40 IF (JCL.GT.N) THEN
           IF (GAMMA(JPAIR).GT.1.0E-03.OR.EB2.GT.EBH) GO TO 100
       END IF
+*       Employ one more skip for rare case of ECC1 > 1 (SJA 2/17).
+      IF (ECC1.GT.1.0) GO TO 100
 *
 *       Estimate relative perturbation at apocentre from actual value.
       GI = PERT*(SEMI1*(1.0 + ECC1)/RIJ)**3
@@ -683,7 +700,7 @@
           BJ = BODY(JCL)
           EOUT = ECC1
 *       Increase tolerance near sensitive stability boundary (RM 10/2008).
-          IF (EOUT.GT.0.8) THEN
+          IF (EOUT.GT.0.8.AND.EOUT.LT.0.99) THEN  ! Danger above 0.99.
               DE = 0.5*(1.0 - EOUT)
               DE = MIN(DE,0.01D0)
 *       Evaluate outer eccentricity derivative due to dominant perturber.
@@ -709,27 +726,28 @@
           QST = QSTAB(ECC,EOUT,ANGLE,BODY(I1),BODY(I2),BJ)
           RP = PMIN/SEMI
           IF (QST.LT.RP) THEN
-*       Produce optional diagnostic on disagreement.
+*       Produce optional diagnostic on disagreement (only new INC).
               IF (NST.NE.0.AND.KZ(48).GT.0) THEN
                   Q3 = BJ/(BODY(I1) + BODY(I2))
                   INC = 360.0*ANGLE/TWOPI
-                  WRITE (88,440)  TIME+TOFF, ECC, EOUT, INC, Q3, RP,
-     &                            QST, NST
-  440             FORMAT (' STABTEST   T E E1 I M3/MB RP/A QST NST ',
-     &                                 F6.1,2F6.2,I5,F5.1,2F6.1,I3)
-                  CALL FLUSH(88)
+                  IF (IABS(INC - INC0).GE.5) THEN
+                      INC0 = INC
+                      WRITE (88,440)  TIME+TOFF, ECC, EOUT, INC, Q3, RP,
+     &                                QST, NST
+  440                 FORMAT (' STABTEST  T E E1 I M3/MB RP/A QST NST ',
+     &                                    F8.2,2F6.2,I5,F5.1,2F6.2,I3)
+                      CALL FLUSH(88)
+                  END IF
               END IF
-*       Reduce the limit slightly, also allowing for perturbation.
-              PCRIT = 0.99*PMIN*(1.0 - PERT)
-              PCR = QST*SEMI
-              IF (PCRIT.LT.YFAC*PCR.AND.PERT.LT.0.02.AND.
-     &            NMTRY.LT.10) THEN
-                  ALPH = 360.0*ANGLE/TWOPI
-                  FAIL = PMIN*(1-PERT) - YFAC*PCR
-                  WRITE (6,43)  TTOT, ALPH, ECC, ECC1, PMIN, FAIL, PERT
-   43             FORMAT (' NEWSTAB    T INC EI EO PMIN FAIL PERT ',
-     &                                 F7.1,F7.2,2F8.4,1P,3E10.2)
-              END IF
+*       Increase the limit slightly, also allowing for perturbation.
+              PCRIT = 1.1*QST*SEMI
+*             IF (PCRIT.LT.YFAC*PMIN.AND.PERT.LT.0.02) THEN
+*                 ALPH = 360.0*ANGLE/TWOPI
+*                 FAIL = PMIN*(1-PERT) - YFAC*PCRIT
+*                 WRITE (6,43)  TTOT, ALPH, ECC, ECC1, PMIN, FAIL, PCRIT
+*  43             FORMAT (' NEWSTAB    T INC EI EO PMIN FAIL PCRIT ',
+*    &                                 F7.1,F7.2,2F8.4,1P,3E10.2)
+*             END IF
 *     WRITE (57,444)  BODY(I1),(X(K,I1),K=1,3),(XDOT(K,I1),K=1,3)
 *     WRITE (57,444)  BODY(I2),(X(K,I2),K=1,3),(XDOT(K,I2),K=1,3)
 *     WRITE (57,444)BODY(JCL),(X(K,JCL),K=1,3),(XDOT(K,JCL),K=1,3)
@@ -738,8 +756,7 @@
               PCRIT = 1.01*PMIN
           END IF
       ELSE
-          QST = QSTAB(ECC,ECC1,ANGLE,BODY(I1),BODY(I2),BODY(JCL))
-          PCRIT = QST*SEMI
+          PCRIT = PMIN
       END IF
 *
 *       Check whether the main perturber dominates the outer component.
@@ -755,8 +772,8 @@
       PM1 = PMIN*(1.0 - 2.0*PERT)
       PCRIT1 = PCRIT
       CALL TSTAB(I,ECC1,SEMI1,PM1,PCRIT1,YFAC,JCL,ITERM)
-      IF (ITERM.GT.0) GO TO 100
       PCRIT = PCRIT1
+      IF (ITERM.GT.0) GO TO 100
 *
 *       Check perturbed stability condition.
       IF (PMIN*(1.0 - PERT).LT.YFAC*PCRIT) GO TO 100
@@ -889,6 +906,7 @@
      &                              6I7,2F7.3,1P,4E10.2)
           END IF
       ELSE IF (KZ(15).GT.1) THEN
+          IF (JCL.GT.N) GO TO 100
           WHICH1 = ' MERGER '
           IF (JCL.GT.N) WHICH1 = ' QUAD   '
           WRITE (6,20)  WHICH1, IPAIR, TTOT, H(IPAIR), R(IPAIR),
@@ -926,7 +944,6 @@
 *       Save KS index and delay merger until end of block step.
       IF (JCLOSE.GT.N) THEN
           KS2 = JCLOSE - N
-          IF (KS2.GT.IPAIR) KS2 = KS2 - 1
       ELSE
           KS2 = 0
       END IF

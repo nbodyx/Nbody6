@@ -9,8 +9,9 @@
 *
 *
 *       Check option for printing single bodies.
-      IF (KZ(6).LE.2) GO TO 20
-      IBODY = KZ(6)
+      IF (KZ(9).EQ.0) GO TO 20
+      K = KZ(9)
+      IBODY = MIN(5**K,NTOT)
 *
       DO 10 I = 1,IBODY
           FIRR = SQRT(FI(1,I)**2 + FI(2,I)**2 + FI(3,I)**2)

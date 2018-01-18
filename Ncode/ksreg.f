@@ -5,10 +5,17 @@
 *       ----------------------
 *
       INCLUDE 'common6.h'
+      COMMON/FSAVE/  SAVEIT(6)
       REAL*8  SAVE(15)
       EXTERNAL RENAME
-      COMMON/FSAVE/  SAVEIT(6)  
 *
+*
+*       Ensure ICOMP < JCOMP.
+      IF (ICOMP.GT.JCOMP) THEN
+          ISAVE = ICOMP
+          ICOMP = JCOMP
+          JCOMP = ISAVE
+      END IF
 *
 *       Save updated regular force & derivative for new KSINIT procedure.
       DTR = TIME - T0R(ICOMP)
@@ -136,16 +143,27 @@
    20     IF (LIST(1,I).GT.0.AND.LIST(2,I).LT.IFIRST) THEN
               J2 = LIST(2,I)
               J = KVEC(J2) + N
-              NNB = LIST(1,I)
-              DO 25 L = 2,NNB+1
-                  IF (L.LE.NNB.AND.LIST(L+1,I).LT.J) THEN
-                      LIST(L,I) = LIST(L+1,I)
+              IF (LIST(1,I).EQ.1) THEN
+                  LIST(2,I) = J
+              ELSE
+                  L = 2
+   22             JNEXT = LIST(L+1,I)
+                  IF (JNEXT.LT.J) THEN
+                      LIST(L,I) = JNEXT
+                      L = L + 1
+                      IF (L.LE.LIST(1,I)) GO TO 22
+                      LIST(L,I) = J
+                  ELSE IF (JNEXT.EQ.J) THEN
+                      DO 25 LL = L,LIST(1,I)
+                          LIST(LL,I) = LIST(LL+1,I)
+   25                 CONTINUE
+                      LIST(1,I) = LIST(1,I) - 1
                   ELSE
                       LIST(L,I) = J
-*       Check again until first neighbour > 2*NPAIRS.
-                      GO TO 20
                   END IF
-   25         CONTINUE
+*       Check again until first neighbour > ICOMP.
+                  GO TO 20
+              END IF
           END IF
    30 CONTINUE
 *

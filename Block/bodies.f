@@ -9,7 +9,8 @@
 *
 *
 *       Check option for printing single bodies.
-      IF (KZ(6).LE.2) GO TO 20
+      IF (KZ(9).EQ.0) GO TO 20
+      K = KZ(9)
       IBODY = MIN(5**K,NTOT)
 *
       DO 10 I = 1,IBODY

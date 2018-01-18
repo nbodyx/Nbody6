@@ -204,8 +204,9 @@
 *       Check option for external tidal field using predicted FREG.
    70 DT = TIME - T0(I)
       IF (KZ(14).GT.0) THEN
+          DTR = TIME - T0R(I)
           DO 75 K = 1,3
-              FREG(K) = FR(K,I) + FRDOT(K,I)*DT
+              FREG(K) = FR(K,I) + FRDOT(K,I)*DTR
    75     CONTINUE
           CALL XTRNLF(XI,XIDOT,FIRR,FREG,FD,FDUM,0)
       END IF

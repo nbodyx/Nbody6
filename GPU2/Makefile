@@ -1,6 +1,6 @@
 #avx       = enable
 chainmode = archain
-ksblock   = on
+#ksblock   = on
 
 ifeq ($(avx), enable)
 MKOPTIONS += avx=enable

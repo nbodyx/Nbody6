@@ -53,7 +53,7 @@
 *       Determine new interval for unperturbed motion (>= TK).
           TK = TWOPI*SEMI*SQRT(SEMI/BODY(I))
           IP = IPAIR
-          CALL TPERT(IPAIR,GMIN,DT)
+          CALL TPERT(IPAIR,GMIN,DT,JCL)
           IPAIR = IP
 *       Adopt c.m. step instead if integer argument exceeds 10**9.
           IF (DT.LT.2.0E+09*TK) THEN

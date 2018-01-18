@@ -54,10 +54,12 @@
               END IF
 *       Terminate smallest pair first and copy second pair index.
               CALL KSTERM
+              IF (JCLOSE.GT.N+KSPAIR) JCLOSE = JCLOSE - 1
+              IF (KS2.GT.KSPAIR) KS2 = KS2 - 1
               KSPAIR = KS2
 *       Specify JCOMP < 0 to prevent spurious prediction second KSTERM call.
               JCOMP = -1
-              IF (KZ(26).LT.2) JCLOSE = 0   ! bug fix 14/6/14 (maybe?)
+              IF (KZ(26).LE.2) JCLOSE = 0   ! bug fix 14/6/14 (maybe?)
           END IF
 *
 *       Save KSTAR (> 0) and sum of component names (for chain termination).
@@ -68,14 +70,15 @@
           END IF
 *
 *       Terminate binary in triple or widest binary-binary collision pair.
-          CALL KSTERM
+          IF (KSPAIR.GT.0) THEN  ! Include case of inert binary from IMPACT.
+              CALL KSTERM
+              IF (JCLOSE.EQ.N+KSPAIR) JCLOSE = 0
+          END IF
 *
 *       See whether chain regularization indicator should be switched on.
           IF (KCHAIN.GT.0) THEN
               IPHASE = 8
           END IF
-*       Copy index for SETSYS (JCLOSE > N suffices for B-B case).
-          JCLOSE = JCL0     ! Note JCLOSE may change in 2nd KSTERM (Jan/16).
       END IF
 *
    10 RETURN

@@ -137,10 +137,10 @@
       EMAX = SQRT(EMAX)
 *
 *       Form minimum eccentricity (Douglas Heggie, Sept. 1996).
-      AZ = A**2 + Z - 2.0
-      IF (AZ.GE.0.0) THEN
+      AZ2 = A**2 + Z - 2.0
+      IF (AZ2.GE.0.0) THEN
           AZ1 = 1.0 + Z - 4.0*A**2
-          EMIN2 = ONE6*(AZ1 - SQRT(AZ1**2 - 12.0*AZ))
+          EMIN2 = ONE6*(AZ1 - SQRT(AZ1**2 - 12.0*AZ2))
       ELSE
           EMIN2 = 1.0 - 0.5*(A**2 + Z)
       END IF
@@ -184,10 +184,9 @@
 *
 *       Check termination time for marginal stability criterion.
       IF (NAME(I).EQ.NAMEI.AND.(TIME+TOFF).GT.TCHECK) THEN
-          WRITE (6,17)  NAME(I), ECC, EMAX, ALPH, ZFAC, ECC1, PMIN1,
-     &                  PCRIT
-   17     FORMAT (' ECCMOD UNSTAB    NM E EX IN YF E1 PM PC ',
-     &                               I6,2F8.4,F7.1,F6.2,F7.3,1P,2E10.2)
+          WRITE (6,17)  NAME(I), ECC, EMAX, ALPH, ZFAC, ECC1, PMIN1
+   17     FORMAT (' ECCMOD UNSTAB    NM E EX IN YF E1 PM ',
+     &                               I6,2F8.4,F7.1,F6.2,F7.3,1P,E10.2)
           IQ = -4
           GO TO 40
       END IF
@@ -271,7 +270,7 @@
 *       Activate chaos indicator for calling KSTIDE from RESET.
               KSTARM(IM) = -1
               GO TO 40
-	  ELSE IF (IDIS.EQ.-1) THEN
+          ELSE IF (IDIS.EQ.-1) THEN
               WRITE (6,23)  TTOT, NAME(I), IC, ECC, EMAX, SEMI, QPERI,
      &                      EDAV, QPERI/RM
    23         FORMAT (' ECCMOD SPIRAL    T NAM IC E EX A QP EDAV QP/R ',

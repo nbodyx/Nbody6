@@ -1,8 +1,8 @@
       SUBROUTINE CHLIST(II)
 *
 *
-*       Perturber list for chain regularization.
-*       -----------------------------------------
+*       Perturber list for ARC regularization.
+*       --------------------------------------
 *
       INCLUDE 'common6.h'
         REAL*8  M,MASS,MC
@@ -19,12 +19,10 @@
 *
 *
 *     IF (II.EQ.0) I = ICH
-*       Use 5 x harmonic mean of RMIN & RGRAV for basic search distance.
-*     RPERT = 5.0*RMIN*ABS(RGRAV)/(RMIN + ABS(RGRAV))
-      RPERT = MIN(0.5*RSUM,2.0*RGRAV)
+      RPERT = 0.5*RSUM
       RCRIT2 = 2.0*RPERT**2/BODY(ICH)
       RCRIT3 = RCRIT2*RPERT/(0.03*GMIN)
-      RCRIT2 = CMSEP2*RPERT**2  ! maybe a bit much
+      RCRIT2 = CMSEP2*RPERT**2
       GPERT = 0.0
 *
 *       Select new perturbers from c.m. neighbour list (search to 100*RPERT).
@@ -32,7 +30,7 @@
       NNB2 = LIST(1,ICH) + 1
       DO 10 L = 2,NNB2
           J = LIST(L,ICH)
-*       Note call from routine CHAIN with I = 1 (hence use ICH).
+*       Note call from routine CHAIN with II = 0 (hence use ICH).
           W1 = X(1,J) - X(1,ICH)
           W2 = X(2,J) - X(2,ICH)
           W3 = X(3,J) - X(3,ICH)
@@ -42,7 +40,7 @@
           RIJ3 = RSEP2*SQRT(RSEP2)
           IF (RIJ3.GT.BODY(J)*RCRIT3) GO TO 10
           GAM = 0.0
-*       Loop over chain members for each neighbour.
+*       Loop over chain members to get maximum for each neighbour.
           DO 5 LL = 1,NCH-1
 *       Estimate perturbation for each chain distance using same RIJ3.
               GX = 2.0*BODY(J)/(M(LL) + M(LL+1))/(RIJ3*RINV(LL)**3)
@@ -76,7 +74,7 @@
       IF (NPERT.GT.6.AND.ITER.LT.10) THEN
         ITER = ITER + 1
         WRITE (6,20)  NPERT, NNB2, GPERT, RPERT, (1.0/RINV(K),K=1,NCH-1)
-   20   FORMAT (' CHLIST!   NP NB2 GP RPERT R  ',I4,I5,1P,6E10.2)
+   20   FORMAT (' CHLIST!   NP NB2 GP RPERT R  ',I4,I5,1P,8E10.2)
       END IF
 *
       RETURN

@@ -189,6 +189,7 @@
       RIJ2 = A1*A1 + A2*A2 + A3*A3
 *       Accept body #J only if distance to JCL is < 2*RMIN (skip J = I).
       IF (RIJ2.GT.RMIN22.OR.J.EQ.I) GO TO 332
+      IF (J.LE.IFIRST + 3) GO TO 350
 *
 *       Carry out force modifications due to addition of neighbour.
   342 DR2 = 0.0

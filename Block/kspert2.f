@@ -18,6 +18,14 @@
       DATA HIP /0.0D0/
 *
 *
+*       Restore < 0 KS index and use ISKIP > 0 to avoid PN energy correction.
+      IF (I1.LT.0) THEN
+          ISKIP = 1
+          I1 = -I1
+      ELSE
+          ISKIP = 0
+      END IF
+*
 *       Initialize the perturbing force & first derivative.
       DO 10 K = 1,6
           FP(K) = 0.0D0
@@ -272,7 +280,7 @@
           IF (DW.GT.1.0D-04) THEN
               DH = H(IP) - HIP
 *       Skip the energy correction after significant change (new KS).
-              IF (ABS(DH).GT.1.0D-04*ABS(H(IP))) THEN
+              IF (ABS(DH).GT.4.0D-04*ABS(H(IP)).AND.ISKIP.EQ.0) THEN
                   IC = 0
                   HIP = H(IP)
               ELSE
@@ -287,21 +295,19 @@
               DT = STEP(I1)
 *       Obtain the PN perturbation.
               CALL PNPERT2(BODY(I1),BODY(I1+1),XREL,VREL,TF,TD,DT,IC,
-     &                     CLIGHT,DE)
-*       Accumulate the GR energy loss in ECOLL using Hermite integration.
-              IF (IC.GT.0) THEN
+     &                     ISKIP,CLIGHT,DE)
+*       Accumulate PN energy loss in ECOLL after call from KSINT and IC > 0.
+              IF (IC.GT.0.AND.ISKIP.EQ.0) THEN
                   ECOLL = ECOLL - DE
-              ELSE
-                  IC = 1
               END IF
 *       Combine the pertubations.
               DO 80 K = 1,3
                   FP(K) = FP(K) + TF(K)
                   FD(K) = FD(K) + TD(K)
    80         CONTINUE
-*       Signal termination for pericentre < 10*RSCH (experimental).
+*       Signal termination for pericentre < 10*RSCH (experimental but suppressed).
               PMIN = SEMI*(1.0 - SQRT(ECC2))
-              RSCH = 6.0*BODY(I)/CLIGHT**2
+*             RSCH = 6.0*BODY(I)/CLIGHT**2
 *             IF (PMIN.LT.10000.0*RSCH.AND.IX.GT.1000) IPHASE = -1
 *             IF (DW.GT.1.0D-02.AND.IX.GT.1000) IPHASE = -1
               IX = IX + 1
@@ -316,7 +322,7 @@
       END IF
 *
 *       Include possible contribution from central point-mass.
-      IF (GMG.GT.0.0D0) THEN
+      IF (KZ(14).EQ.3.OR.KZ(14).EQ.4) THEN
           DO 95 K = 1,3
               XG(K) = RG(K) + XI(K)   ! Note XG used for each KS component.
               XGDOT(K) = VG(K) + VI(K)

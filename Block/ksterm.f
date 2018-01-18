@@ -57,7 +57,7 @@
               STEP(I1) = ZMOD*STEP(I1)
               DT = STEP(I1)
               CALL STEPK(DT,DTN)
-              STEP(I1) = DTN
+              STEP(I1) = MIN(DTN,SMAX)
 *       Restrict increase of R for superfast particles in one block-step.
               IF (H(IPAIR).GT.100.0.AND.R(IPAIR).GT.RMIN) GO TO 3
               GO TO 1
@@ -91,7 +91,7 @@
           CALL KSINT(I1,1)
           DT = STEP(I1)
           CALL STEPK(DT,DTN)
-          STEP(I1) = DTN
+          STEP(I1) = MIN(DTN,SMAX)
     3     TIME = TIME0
 *
 *       Predict X & XDOT for body #JCOMP (note TIME = TBLOCK if second call).
@@ -122,11 +122,11 @@
       CALL NBPOT(2,NP,POT1)
 *
 *       Rectify the orbit to yield U & UDOT consistent with binding energy.
-      CALL KSRECT(IPAIR)
+      CALL KSRECT(IPAIR)    ! Dangerous to omit unperturbed case (9/16).
 *
 *       Retain final KS variables for explicit restart at merge termination.
       IF (TIME.LE.TBLOCK.AND.IPHASE.EQ.6) THEN
-          HM(NMERGE) = H(IPAIR)       ! Note IPHASE may change after MERGE.
+          HM(NMERGE) = H(IPAIR)
           DO 6 K = 1,4
               UM(K,NMERGE) = U(K,IPAIR)
               UMDOT(K,NMERGE) = UDOT(K,IPAIR)
@@ -226,6 +226,7 @@
       NPAIRS = NPAIRS - 1
       NTOT = N + NPAIRS
       IFIRST = 2*NPAIRS + 1
+      IF (NPAIRS.EQ.0) NNTB = 0
 *
 *       Save name of components & flag for modifying LISTD in UPDATE.
       JLIST(1) = NAME(I1)
@@ -335,18 +336,30 @@
       CALL UPDATE(IPAIR)
 *
 *       Check replacing of single KS component by corresponding c.m.
-   70 IF (LIST(2,ICOMP).LT.ICOMP) THEN
+   70 IF (NNB1.GT.1.AND.LIST(2,ICOMP).LT.ICOMP) THEN
           J2 = LIST(2,ICOMP)
           J = KVEC(J2) + N
-          DO 80 L = 2,NNB1
-              IF (L.LT.NNB1.AND.LIST(L+1,ICOMP).LT.J) THEN
-                  LIST(L,ICOMP) = LIST(L+1,ICOMP)
+          IF (NNB1.EQ.2) THEN
+              LIST(2,ICOMP) = J
+          ELSE
+              L = 2
+   80         JNEXT = LIST(L+1,ICOMP)
+              IF (JNEXT.LT.J) THEN
+                  LIST(L,ICOMP) = JNEXT
+                  L = L + 1
+                  IF (L.LT.NNB1) GO TO 80
+                  LIST(NNB1,ICOMP) = J
+              ELSE IF (JNEXT.EQ.J) THEN
+                  NNB1 = NNB1 - 1
+                  DO 85 LL = L,NNB1
+                      LIST(LL,ICOMP) = LIST(LL+1,ICOMP)
+   85             CONTINUE
               ELSE
                   LIST(L,ICOMP) = J
               END IF
-   80     CONTINUE
 *       Check again until first neighbour > ICOMP.
-          GO TO 70
+              GO TO 70
+          END IF
       END IF
 *
 *       Make space for dominant component and copy members to JCOMP list.
@@ -449,7 +462,7 @@
 *
 *       Truncate the orbital time-step (formed from Kepler period).
           CALL STEPK(DTCL,DTN)
-          STEP(I) = DTN
+          STEP(I) = MIN(DTN,SMAX)
           ITER = 0
 *       Perform commensurability check.
   140     IF (DMOD(TIME,STEP(I)).NE.0.0D0) THEN
@@ -461,7 +474,10 @@
 *
 *       Initialize next irregular time and copy c.m. regular time-step.
           TNEW(I) = TIME + STEP(I)
-          CALL STEPK(CMSTEP,DTN)
+          VI2 = XDOT(1,I)**2 + XDOT(2,I)**2 + XDOT(3,I)**2
+          DT0 = 0.5*RS(I)/SQRT(VI2)
+          DT = MIN(DT0,SMAX,CMSTEP)
+          CALL STEPK(DT,DTN)
           STEPR(I) = DTN
           ITER = 0
 *       Perform commensurability check.

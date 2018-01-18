@@ -315,8 +315,6 @@
           IF (IFAIL.GT.10) ICALL = 0
       END IF
 *
-*       Do a temporary copy to get round mystery of small STEP (04/16).
-      STEP = STEP
 *       Advance the solution one step.
       CALL DIFSY1(NEQ,EPS,STEP,STIME,Y)
 *
@@ -332,8 +330,8 @@
 *  19 FORMAT (' WATCH!   # ENERGY S G R ',I6,F12.6,1P,6E10.2)
 *     CALL FLUSH(6)
 *
-*       Predict perturbers & XC, UC and form new LISTC every 10 steps.
-      IF (MOD(NSTEP1,5).EQ.0) THEN
+*       Predict perturbers & XC, UC and form new LISTC every 5 steps.
+      IF (MOD(NSTEP1,5).EQ.0.OR.GPERT.GT.0.001) THEN
           JJ = 0
           CALL XCPRED(2)
           CALL CHLIST(JJ)
@@ -406,7 +404,7 @@
           STOP
       END IF
 *
-      IF (KZ30.GT.2) THEN
+      IF (KZ30.GT.3) THEN
           WRITE (6,30)  STEP, TMAX-CHTIME, GPERT, (1.0/RINV(K),K=1,N-1)
    30     FORMAT (' CHAIN:   STEP TM-CHT G R  ',1P,8E9.1)
       END IF
@@ -659,11 +657,17 @@
           CALL TRANSX
           ECH = ENERGY
           TIMEC = CHTIME
-          IF (KZ30.GT.2) THEN
+          IF (KZ30.GT.3) THEN
               WRITE (6,55)  NSTEP1, T0S(ISUB)+TIMEC, TMAX-TIMEC,
      &                      (1.0/RINV(K),K=1,N-1)
    55         FORMAT (' CHAIN:  # T DTR R ',I5,F10.4,1P,6E9.1)
           END IF
+*
+*       Include exit on exceeding TMAX (improvement 08/16).
+          IF (CHTIME.GT.TMAX) THEN
+              GO TO 100
+          END IF
+*
 *       Avoid checking after switch (just in case).
           IF (ISW.LE.1) THEN
 *       Update RGRAV in case of compact initial size.
@@ -684,7 +688,7 @@
      &        GPERT.LT.0.1) KCASE = 0
               IF (KCASE.GT.0) THEN
                   CALL RECOIL(1)
-                  IF (CHTIME.LT.TMAX) GO TO 10
+                  IF (CHTIME.LT.TMAX) GO TO 70
               END IF
               IF (KCASE.LT.0) GO TO 70
           END IF

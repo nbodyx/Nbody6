@@ -237,7 +237,7 @@
               CALL XVPRED(I,0)
               KSPAIR = IPAIR
 *       Delay collision/coalescence until end of KSINT using IPHASE < 0.
-              IPHASE = -1
+*             IPHASE = -1
 *             CALL CMBODY(R(IPAIR),2)
               DMR = -1.0
               GO TO 30

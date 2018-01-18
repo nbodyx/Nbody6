@@ -12,6 +12,7 @@
 *       Form ghost and initialize integration variables for body #J.
       BODY(J) = 0.0D0
       T0(J) = 1.0E+06
+      TNEW(J) = 1.0E+06
       DO 10 K = 1,3
           X0DOT(K,J) = 0.0D0
           XDOT(K,J) = 0.0D0

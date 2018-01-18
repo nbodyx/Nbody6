@@ -1,4 +1,4 @@
-      SUBROUTINE TPERT(IPAIR,GA,DT)
+      SUBROUTINE TPERT(IPAIR,GA,DT,JCL)
 *
 *
 *       Perturbation time scale.
@@ -10,6 +10,7 @@
 *
 *       See whether irregular time-step can replace full loop.
       I = N + IPAIR
+      JCL = 0
       SEMI = -0.5*BODY(I)/H(IPAIR)
       TK = TWOPI*SEMI*SQRT(SEMI/BODY(I))
       IF (STEP(I).GT.TK) THEN
@@ -20,7 +21,6 @@
 *       Initialize scalars.
       FMAX = 0.0
       DTIN = 1.0E+20
-      JCLOSE = 0
       NNB1 = LIST(1,I) + 1
 *
 *       Check rare case of no neighbours.
@@ -56,12 +56,12 @@
           IF (FIJ.GT.FMAX) THEN
               FMAX = FIJ
               RJMIN2 = RIJ2
-              JCLOSE = J
+              JCL = J
           END IF
    10 CONTINUE
 *
 *       Specify safe interval if no candidates selected.
-      IF (JCLOSE.EQ.0) THEN
+      IF (JCL.EQ.0) THEN
           DT = 2.0*STEP(I)
           GO TO 20
       END IF
@@ -83,9 +83,9 @@
       DT = MIN(DT,DTMAX)
 *
 *       Skip dominant force test if there is only one critical body.
-      IF (JCRIT.NE.JCLOSE) THEN
+      IF (JCRIT.NE.JCL) THEN
 *       Form the return time of the dominant body and choose the minimum.
-          DR = SQRT(RJMIN2) - RI*(BODY(JCLOSE)*A1)**0.3333
+          DR = SQRT(RJMIN2) - RI*(BODY(JCL)*A1)**0.3333
           DTMAX = SQRT(2.0D0*ABS(DR)/FMAX)
           DT = MIN(DT,DTMAX)
       END IF
@@ -93,6 +93,9 @@
 *       Apply safety test in case background force dominates c.m. motion.
       DT = MIN(DT,2.0D0*STEP(I))
       DT = MAX(DT,0.0D0)
+*     WRITE (6,30)  IPAIR, JCL
+*  30 FORMAT (' TPERT!!!    IP JCL ',I5,I12)
+*     CALL FLUSH(6)
 *
    20 RETURN
 *

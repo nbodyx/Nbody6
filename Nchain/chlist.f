@@ -2,7 +2,7 @@
 *
 *
 *       Perturber list for chain regularization.
-*       -----------------------------------------
+*       ----------------------------------------
 *
       INCLUDE 'common6.h'
       REAL*8  M,MASS,MC,MIJ,MKK

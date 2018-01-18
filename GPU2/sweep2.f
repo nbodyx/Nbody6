@@ -28,14 +28,13 @@
 *
 *       Skip any close c.m./chain body (small STEP treated by IMPACT).
       IF (JMIN.EQ.0.OR.JMIN.GT.N) GO TO 30
-      IF (NAME(JMIN).LE.0) GO TO 30
+      IF (NAME(I).LE.0.OR.NAME(JMIN).LE.0) GO TO 30
+      IF (I.GT.N) GO TO 30
 *
 *       Form inverse semi-major axis.
       VIJ2 = 0.0
-      RD = 0.0
       DO 15 K = 1,3
           VIJ2 = VIJ2 + (XDOT(K,I) - XDOT(K,JMIN))**2
-          RD = RD + (X(K,I) - X(K,JMIN))*(XDOT(K,I) - XDOT(K,JMIN))
    15 CONTINUE
       AINV = 2.0/SQRT(RX2) - VIJ2/(BODY(I) + BODY(JMIN))
 *
@@ -45,7 +44,6 @@
           JCOMP = JMIN
 *       Skip rare case of chain & standard c.m. as binary component.
           IF (NAME(ICOMP).LE.0.OR.I.GT.N.OR.NSUB.GT.0) GO TO 30
-          IF (RD.GT.0.0) GO TO 30
           IKS = 1
           IT = IT + 1
           IF (IT.EQ.1) GO TO 30

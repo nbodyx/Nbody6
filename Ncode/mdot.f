@@ -66,6 +66,8 @@
 *       Treat list members sequentially until GO TO 5 at end.
     4 ML = ML + 1
       I = MLIST(ML)
+*       Beware reduction of NTOT by KSTERM since last update!! (bug 2/17).
+      IF (I.GT.NTOT) GO TO 100
 *
 *       Avoid the same binary or merger
       IF (TEV(I).GT.TIME) THEN
@@ -831,9 +833,9 @@
                IF ((DMR.GT.0.2.AND.R(KSPAIR).GT.RMIN).OR.
      &            (DM.GT.0.0.AND.H(KSPAIR) + DM/SEMI.GT.-ECLOSE.AND.
      &            KSTAR(N+KSPAIR).GE.0).OR.
-*    &            (KW.NE.KSTAR(I).AND.KW.GE.13)) THEN
+     &            (GAMMA(KSPAIR).GT.0.001.AND.
      &            (KW.NE.KSTAR(I).AND.
-     &            (KW.GE.13.OR.(KW.GE.10.AND.KZ(25).GT.0)))) THEN
+     &            (KW.GE.13.OR.(KW.GE.10.AND.KZ(25).GT.0))))) THEN
                   I = I + 2*(NPAIRS - KSPAIR)
                   JX(K) = I
                   IF(KACC.EQ.2)THEN
@@ -992,7 +994,7 @@
                DO 50 L = 2,NNB2
                   J = ILIST(L)
                   IF (L.EQ.NNB2) J = I
-                  IF (KW.EQ.15.AND.LIST(1,J).EQ.1) THEN  ! Jarrod fix 12/15.
+                  IF (KW.EQ.15.AND.LIST(1,J).EQ.1) THEN
                      JJ = LIST(2,J)
                      IF (BODY(JJ).EQ.0.D0) THEN
                         LIST(1,J) = 2

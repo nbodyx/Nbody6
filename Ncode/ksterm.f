@@ -22,6 +22,7 @@
 *       Save regular c.m. step and form irregular time-step (cf. ADJUST).
       CMSTEP = STEPR(ICM)
       DTCL = 0.04*SQRT(R(IPAIR)**3/BODY(ICM))
+      IF (DTCL.LT.1.0D-09) DTCL = 1.0D-09
 *       Include first-order prediction in regular force & derivative.
       DTR = TIME - T0R(ICM)
       DO 200 K = 1,3
@@ -219,6 +220,7 @@
       NPAIRS = NPAIRS - 1
       NTOT = N + NPAIRS
       IFIRST = 2*NPAIRS + 1
+      IF (NPAIRS.EQ.0) NNTB = 0
 *
 *       Save name of components & flag for modifying LISTD in UPDATE.
       JLIST(1) = NAME(I1)
@@ -441,7 +443,7 @@
 *
 *       Truncate the orbital time-step (formed from Kepler period).
           CALL STEPK(DTCL,DTN)
-          STEP(I) = DTN
+          STEP(I) = MIN(DTN,SMAX)
           ITER = 0
 *       Perform commensurability check.
   140     IF (DMOD(TIME,STEP(I)).NE.0.0D0) THEN

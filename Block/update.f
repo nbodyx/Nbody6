@@ -23,42 +23,33 @@
           NNB = LIST(1,J)
           IF (NNB.EQ.0) GO TO 50
           L = 2
-*       Determine list index and new location of any regularized component.
-          INEW = 0
-   10     IF (LIST(L,J).EQ.2*IPAIR-1) THEN
-              I = 2*IPAIR - 1
-              INEW = 2*NPAIRS + 1
-          ELSE IF (LIST(L,J).EQ.2*IPAIR) THEN
-              I = 2*IPAIR
-              INEW = 2*NPAIRS + 2
-          ELSE IF (INEW.EQ.0) THEN
-*       Define as zero for single body test below (at least one < ILAST).
-              I = 0
-*       Note that L = 2 may be single body and L = 3 current KS component.
+          KREN = 0
+*       Rename regularized components > 2*IPAIR and reduce by 2 if <= ILAST.
+   10     IOLD = LIST(L,J)
+          IF (IOLD.EQ.2*IPAIR-1) THEN
+              LIST(L,J) = 2*NPAIRS + 1
+              KREN = KREN + 1
+          ELSE IF (IOLD.EQ.2*IPAIR) THEN
+              LIST(L,J) = 2*NPAIRS + 2
+              KREN = KREN + 1
+          ELSE IF (IOLD.GT.2*IPAIR.AND.IOLD.LE.ILAST) THEN
+              LIST(L,J) = LIST(L,J) - 2
           END IF
           L = L + 1
-          IF (L.LE.NNB+1.AND.LIST(L,J).LT.ILAST) GO TO 10
+          IF (L.LE.NNB+1.AND.IOLD.LT.ILAST) GO TO 10
 *
-*       Rename regularized components > 2*IPAIR and reduce by 2 if <= ILAST.
-          DO 20 K = 2,L
-*       Note that L determined above is list index of standard particle.
-              IF (LIST(K,J).EQ.I) THEN
-                  LIST(K,J) = INEW
-              ELSE IF (LIST(K,J).LE.ILAST.AND.
-     &                 LIST(K,J).GT.2*IPAIR) THEN
-                  LIST(K,J) = LIST(K,J) - 2
-              END IF
-   20     CONTINUE
 *
 *       Check that list of single KS components is sequential (up to ILAST).
-          L = 2
-   30     IF (LIST(L+1,J).LT.LIST(L,J).AND.L.LE.NNB) THEN
-              JL = LIST(L,J)
-              LIST(L,J) = LIST(L+1,J)
-              LIST(L+1,J) = JL
-          END IF
-          L = L + 1
-          IF (LIST(L,J).LE.ILAST.AND.L.LE.NNB+1) GO TO 30
+          DO 40 K = 1,KREN
+              L = 2
+   30         IF (LIST(L+1,J).LT.LIST(L,J).AND.L.LE.NNB) THEN
+                  JL = LIST(L,J)
+                  LIST(L,J) = LIST(L+1,J)
+                  LIST(L+1,J) = JL
+              END IF
+              L = L + 1
+              IF (LIST(L,J).LE.ILAST.AND.L.LE.NNB+1) GO TO 30
+   40     CONTINUE
    50 CONTINUE
 *
 *       Replace c.m. by components and reduce subsequent members by one.
@@ -66,11 +57,11 @@
           IF (BODY(J).EQ.0.0D0) GO TO 80
           NNB = LIST(1,J)
           L = NNB + 1
-          MOVE = 0
+*         MOVE = 0
 *       Check for removal of current c.m. and reduce by one if > N + IPAIR.
    70     IF (L.EQ.1.OR.LIST(L,J).LT.ICM) GO TO 80
 *       See whether ICM is on neighbour list (otherwise skip splitting).
-          IF (LIST(L,J).EQ.ICM) MOVE = 1
+*         IF (LIST(L,J).EQ.ICM) MOVE = 1
           IF (LIST(L,J).NE.ICM) THEN
               LIST(L,J) = LIST(L,J) - 1  ! Note ICM not on LIST (see DO 85).
               L = L - 1
@@ -78,7 +69,7 @@
           END IF
 *
 *       Skip on zero ID or remove c.m. name by moving up subsequent members.
-          IF (MOVE.EQ.0) GO TO 80
+*         IF (MOVE.EQ.0) GO TO 80
    72     IF (L.LE.NNB) THEN
               LIST(L,J) = LIST(L+1,J) 
               L = L + 1

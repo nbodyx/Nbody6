@@ -75,7 +75,6 @@
       WDKMAX = 6.D0
       BHFLAG = 0
       BHFLAG = 2
-      DISP = 20.0
 *
 *       Save orbital parameters in case of KS binary (called from KSAPO).
       IF (ICASE.EQ.0) THEN
@@ -84,11 +83,10 @@
 *       Identify the correct component (KSTAR reversed in MDOT or EXPEL).
           I1 = 2*IPAIR - 1
           IF (KSTAR(I1).LE.0) THEN
-              IN = I1
+              KSTAR(I1) = -KSTAR(I1)
           ELSE IF (KSTAR(I1+1).LE.0) THEN
-              IN = I1 + 1
+              KSTAR(I1+1) = -KSTAR(I1+1)
           END IF
-          KSTAR(IN) = -KSTAR(IN)
 *
 *       Determine mass loss and actual disruption velocity.
 *         DM = BODY(IN) - 1.4/ZMBAR
@@ -260,9 +258,9 @@
       ECDOT = ECDOT - 0.5*BODY(I)*(VF2 - VI2)
       NKICK = NKICK + 1
 *
-*       Evaluate binary kick energy from relative velocity (for
-*       diagnostics).
+*       Evaluate binary kick energy from relative velocity (diagnostics).
       IF (IPAIR.GT.0) THEN
+          IF (I.GT.IFIRST) GO TO 30
           JP = KVEC(I)
           J = I + 1
           IF (I.EQ.2*JP) J = I - 1

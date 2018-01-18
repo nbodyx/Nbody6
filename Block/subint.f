@@ -38,7 +38,7 @@
               LISTKS(NK) = I1
             END IF
     2     CONTINUE
-          IF (NK.EQ.0) GO TO 60
+          IF (NK.EQ.0) GO TO 30      ! Bug fix 10/17.
 *
 *       Determine quantized value of TMIN (next small block-step).
     5     TMIN = TBLOCK

@@ -1,4 +1,4 @@
-      SUBROUTINE PNPERT2(M1,M2,X,V,ACC,DER,DT,IC,CLIGHT,DE)
+      SUBROUTINE PNPERT2(M1,M2,X,V,ACC,DER,DT,IC,ISKIP,CLIGHT,DE)
 *
 *
 *       Post-Newtonian perturbations.
@@ -15,7 +15,6 @@
       REAL*8  ACC(3),DER(3),VDOT(3),X(3),V(3)
       DATA ED0,ED20 /2*0.0D0/
       DATA IIC /0/
-      DATA NSTEP /0/
 *
 *
 *       Save inverse powers of CLIGHT.
@@ -40,46 +39,34 @@
       V2 = V(1)**2 + V(2)**2 + V(3)**2
       RD = (X(1)*V(1) + X(2)*V(2) + X(3)*V(3))/R
 *
-*     A1 = 2*(2+ETA)*MR - (1+3*ETA)*V2 + 1.5*ETA*RD**2
-*     B1 = 2*(2-ETA)*RD
+      A1 = 2*(2+ETA)*MR - (1+3*ETA)*V2 + 1.5*ETA*RD**2
+      B1 = 2*(2-ETA)*RD
 *
-      A1 = 0.0   ! including first order PN leads to large error (10/14).
-      B1 = 0.0
-      HT = 0.5*V2 - MR
-      SEMI = -0.5*M/HT
-*       Define unscaled PN2.5 (positive sign convention).
+*       Define unscaled PN2.5 terms (positive sign convention).
       A25 = 8.0/5.0*ETA*MR*RD*(17.0/3.0*MR + 3.0*V2)
       A = (A1 + A25*CL3)*CL2
 *
       B25 = -8.0/5.0*ETA*MR*(3.0*MR + V2)
       B = (B1 + B25*CL3)*CL2
 *
-*       Set the standard PN2.5 perturbing acceleration for VDOT.
+*       Set the perturbing acceleration for VDOT.
       DO 5 K = 1,3
           ACC(K) = M/R2*(A*X(K)/R + B*V(K))
     5 CONTINUE
 *
-      NSTEP = NSTEP + 1
-*     EB = -0.5*M1*M2/SEMI
-*     WRITE (15,6) R, A, B, CLIGHT, EB
-*   6 FORMAT (' R A B C EB  ',1P,4E10.2,0P,F10.6)
-*     CALL FLUSH(6)
-*       Note ACC scaled by M/R**2/C**3 for actual perturbing force.
+*       Note ACC scaled by M/R**2 for actual perturbing force.
       RVD = 0.0
       VVDOT = 0.0
       DO 10 K = 1,3
-*         VDOT(K) = ACC(K) - MR*X(K)/R2
-          VDOT(K) = ACC(K)
+          VDOT(K) = ACC(K) - MR*X(K)/R2
           RVD = RVD + X(K)*VDOT(K)
           VVDOT = VVDOT + V(K)*VDOT(K)
    10 CONTINUE
-*       Form d2 R/dt**2 from dR/dt & d(R*V)/dt and absorb 1/R in ADOT.
-      RD2 = V2 + RVD - RD**2
+*       Form d2R/dt**2 from dR/dt & d(R*V)/dt and include 1/R later.
+      RD2 = V2 + RVD - RD**2     ! Derived by Jongsuk Hong 09/12.
 *
-*     AD1 = -2*(2+ETA)*MR*RD/R - 2*(1+3*ETA)*VVDOT + 3*ETA*RD*RD2/R
-*     BD1 = 2*(2-ETA)*RD2/R
-      AD1 = 0.0
-      BD1 = 0.0
+      AD1 = -2*(2+ETA)*MR*RD/R - 2*(1+3*ETA)*VVDOT + 3*ETA*RD*RD2/R
+      BD1 = 2*(2-ETA)*RD2/R
 *
 *       Adopt Peter Berczik's A & B derivatives (these have correct sign!).
       ADOT = (17.0/3.0*MR + 3.0*V2)*(RD2 - RD**2)*M/R2 +
@@ -88,29 +75,30 @@
       ADOT = 1.6*ETA*ADOT
       BDOT = 1.6*ETA*BDOT
 *
+*       Include PN2.5 terms for elegance (small cost for DW < 1.0D-03).
       ADOT = (AD1 + ADOT*CL3)*CL2
       BDOT = (BD1 + BDOT*CL3)*CL2
 *
-*       Use equation of motion dV/dt = M/R2*((-1 + A/C**5)*X/R + B*V/C**5).
+*       Use equation of motion dV/dt = M/R2*((-1 + A)*X/R + B*V).
       DO 20 K = 1,3
 *       Note that M/R2 is omitted in all terms (see final scaling).
-*         DER(K) = -2.0*RD/R*(A*X(K)/R + B*V(K)) + ADOT*X(K)/R -
-*    &              A*RD*X(K)/R2 + A*V(K)/R + BDOt*V(K) + B*VDOT(K)
-          DER(K) = -2.0*RD/R*(A*X(K)/R + B*V(K))
-     &             + ADOT*X(K)/R +
-     &              A*(V(K) - RD*X(K))/R
-     &             + BDOT*V(K) + B*VDOT(K)
+          DER(K) = -2.0*RD/R*(A*X(K)/R + B*V(K)) + ADOT*X(K)/R -
+     &              A*RD*X(K)/R2 + A*V(K)/R + BDOT*V(K) + B*VDOT(K)
+*       Include Jongsuk's expressions translated to current variables.
+*         DER(K) = -2.*RD/R*(A*X(K)/R + B*V(K))
+*    &             + (ADOT*X(K)/R + BDOT*V(K) + B*VDOT(K)
+*    &             + A*(V(K)/R - X(K)/R2*RD))
    20 CONTINUE
 *
 *       Scale the acceleration and derivative by the leading term M/R**2.
       GMC = M/R2
       DO 30 K = 1,3
           DER(K) = GMC*DER(K)
-      DER(K) = 0.0
    30 CONTINUE
 *
-*     WRITE (6,78)  ACC, DER
-* 78  FORMAT (' ACC DER  ',1P,8E10.2)
+*       Skip ED & ED2 integration from KSCORR to avoid double accounting.
+      IF (ISKIP.GT.0) GO TO 60
+*
 *       Employ Hermite 4th-order integration for the energy equation.
       ED = 0.0
       ED2 = 0.0
@@ -128,34 +116,26 @@
 ***   ED3 = 2.0*(-3.0*(ED0 - ED) - (2.0*ED20 + ED2)*DT)/DT**2
 ***   ED4 = 6.0*(2.0*(ED0 - ED) + (ED20 + ED2)*DT)/DT**3
 *
-*       Get final result from Keigo's Hermite corrector.
-*     DE = 0.5*(ED0 + ED)*DT + ONE12*(ED20 - ED2)*DT**2
-      DE = ED*DT
+*       Obtain final result from Keigo's Hermite corrector.
+      DE = 0.5*(ED0 + ED)*DT + ONE12*(ED20 - ED2)*DT**2
       DE = ZMU*DE
 *
-*     IF (ABS(DE).GT.1.0D-10) THEN
-*     WRITE (6,455)  NSTEP, R, ED0, ED, DE
-* 455 FORMAT (' LARGE    # R ED0 ED DE ',I6,1P,E10.2,3E10.2)
-*     END IF
-      EB = -0.5*M1*M2/SEMI
-*     WRITE (6,81)  R, ED, ED2, DE, ESAVE(3), EB
-*  81 FORMAT (' FINAL    R ED ED2 DE SUM EB ',1P,5E10.2,E12.4)
 *       Save the two derivatives for next step (safer using COMMON).
       ED0 = ED
       ED20 = ED2
       ESAVE(1) = ED
       ESAVE(2) = ED2
-*     IF (IC.EQ.0) DE = 0.0
-      ESAVE(3) = ESAVE(3) + DE
-      IF (MOD(IC,10000).EQ.0) THEN
+      IF (IC.EQ.0) DE = 0.0
+      IF (IC.GT.0) ESAVE(3) = ESAVE(3) + DE
+      IF (MOD(IC,1000).EQ.0.OR.IC.LT.50) THEN
           HT = 0.5*V2 - MR
           SEMI = -0.5*M/HT
           EB = -0.5*M1*M2/SEMI
-          WRITE (6,50)  IC, R, SEMI, DE, ESAVE(3), EB
-   50     FORMAT (' PNPERT2 ENERGY    IC R A DE EGR EB ',
-     &                                I6,1P,E10.2,E14.6,E10.2,0P,2F12.8)
+          WRITE (6,50)  IC, R, ESAVE(3), EB
+   50     FORMAT (' PNPERT2 ENERGY    IC R EGR EB ',I9,1P,2E10.2,
+     &     0P,F12.6)
       END IF
 *
-      RETURN
+   60 RETURN
 *
       END

@@ -188,8 +188,8 @@
           TDOT5 = TDOT5 + 2.0*FUDOT2(K,IPAIR)*U(K,IPAIR) +
      &             8.0*FUDOT(K,IPAIR)*UDOT(K,IPAIR) + 6.0*FU(K,IPAIR)**2
           TDOT6 = TDOT6 + 2.0*FUDOT3(K,IPAIR)*U(K,IPAIR) +
-     &                    10.0*FUDOT2(K,IPAIR)*UDOT(K,IPAIR) +
-     &                    20.0*FUDOT(K,IPAIR)*FU(K,IPAIR)
+     &                    20.0*FUDOT2(K,IPAIR)*UDOT(K,IPAIR) +
+     &                    10.0*FUDOT(K,IPAIR)*FU(K,IPAIR)
    70 CONTINUE
 *
 *       Check maximum square step (soft binaries & weak hyperbolic pairs).

@@ -47,7 +47,7 @@
                   IF (TIME - T0(I).GT.2.0*STEP(I1)) THEN
                       DT = MIN(3.0D0*STEP(I1),STEP(I))
                       KPERT = 0
-                      JCLOSE = 0
+                      JCL = 0
                       GO TO 20
                   END IF
               END IF
@@ -59,6 +59,7 @@
       CALL TPERT(IPAIR,GMIN,DT)
 *
 *       Restore KS indicator and re-initialize if interval < period.
+      JCL = JCLOSE
       IF (DT.LT.TK) THEN
 *       Form perturber list and restart KS motion if required.
           CALL KSLIST(IPAIR)
@@ -257,18 +258,18 @@
 *
 *       Check merger condition before continuing (skip small Roche steps).
    28 IF (KZ(15).GT.0.AND.IR.GE.0.AND.TIME+STEP(I1).GT.TBLOCK) THEN
-          IF (STEP(I).LT.DTMIN.AND.JCLOSE.GT.0) THEN
+          IF (STEP(I).LT.DTMIN.AND.JCL.GT.0) THEN
               CALL IMPACT(I)
-          ELSE IF (JCLOSE.GT.0.AND.STEP(I).LT.10.0*DTMIN) THEN
-              CALL HISTAB(IPAIR,JCLOSE,PMIN,RSTAB)
+          ELSE IF (JCL.GT.0.AND.STEP(I).LT.10.0*DTMIN) THEN
+              CALL HISTAB(IPAIR,JCL,PMIN,RSTAB)
               IF (RSTAB.LT.PMIN) THEN
                   CALL IMPACT(I)
               END IF
 *       Include a more generous test for massive quadruples.
-          ELSE IF (JCLOSE.GT.N) THEN
-              FAC = 2.0*(BODY(I) + BODY(JCLOSE))/BODYM
+          ELSE IF (JCL.GT.N) THEN
+              FAC = 2.0*(BODY(I) + BODY(JCL))/BODYM
               IF (STEP(I).LT.FAC*DTMIN) THEN
-                  CALL HISTAB(IPAIR,JCLOSE,PMIN,RSTAB)
+                  CALL HISTAB(IPAIR,JCL,PMIN,RSTAB)
                   IF (RSTAB.LT.PMIN) THEN
                       CALL IMPACT(I)
                   END IF

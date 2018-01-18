@@ -101,7 +101,11 @@
                 END IF
 *               IF(M0.LE.0.01D0) KW = 10
                 IF (KZ(45).GT.0.AND.M0.GT.9.99.AND.
-     &          (I.EQ.IB1.OR.I.EQ.IB2)) KW = 14
+     &          (NAME(I).EQ.IB1.OR.NAME(I).EQ.IB2)) KW = 14
+      IF (M1.GT.10.0) WRITE (6,666)  KW, NAME(I)
+  666 FORMAT (' CATCH   KW NAM ',2I5)
+      IF (NAME(I).LT.10) WRITE (6,665) I, NAME(I), M1
+  665 FORMAT (' HELLO!   I NM M ',2I5,F7.2)
              ENDIF
           ENDIF
           MC = 0.D0
@@ -171,7 +175,6 @@
       DT = 1.0d-04/TSCALE
       CALL STEPK(DT,DTN)
       IF(DTN*TSCALE.LT.100.0) DTN = 2.d0*DTN
-      STEPX = DTN
 *
 *        Ensure binary components will be updated at the same time.
       DO 15 I = 1,NBIN0
@@ -182,6 +185,8 @@
          TMDOT = MIN(TMDOT,TEV(I1))
          TEV(I2) = TEV(I1)
    15 CONTINUE
+      STEPX = DTN
+      TMDOT = STEPX
 *
 *       Initialize stellar collision matrix.
 *

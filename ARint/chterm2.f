@@ -24,17 +24,53 @@
       COMMON/ECHAIN/  ECH
 *
 *
-*       Define indices for two components and set commensurate time.
-      I1 = 1
-      I2 = 2
+*      CALL FINDChainIndices   ! Activate for correct INAME after REDUCE.
+      IF (NN.EQ.2) THEN
+*       Determine indices for two main components and set commensurate time.
+          I1 = 1
+          I2 = 2
+          I3 = 0
+          JLIST(8) = 0
+      ELSE
+          RX = 10.0
+          DO 4 L = 1,NN-1
+              DO 3 LL = L+1,NN
+                  RIJ2 = 0.0
+                  LX = 3*(L - 1)
+                  KX = 3*(LL - 1)
+                  DO 2 K = 1,3
+                      RIJ2 = RIJ2 + (XCH(LX+K) - XCH(KX+K))**2
+    2             CONTINUE
+                  IF (RIJ2.LT.RX) THEN
+                      I1 = L
+                      I2 = LL
+                      RX = RIJ2
+                  END IF
+    3         CONTINUE
+    4     CONTINUE
+*       Select the third body by exclusion.
+          DO 1 L = 1,NN
+              IF (NAMEC(L).NE.NAMEC(I1).AND.NAMEC(L).NE.NAMEC(I2)) THEN
+                  I3 = L
+              END IF
+    1     CONTINUE
+          IF (I3.GT.0) THEN
+              JLIST(8) = NAMEC(I3)     ! Index for any third body.
+          ELSE
+              JLIST(8) = 0
+          END IF
+      END IF
+*
       JLIST(6) = NAMEC(I1)
       JLIST(7) = NAMEC(I2)
       NAME(ICH) = NAME0
+*
       TIME = TBLOCK
 *
-*       Identify c.m. body and find global indices.
+*       Identify c.m. body and find global indices (NN = 2 or 3).
       ICM = 0
-      DO 10 J = IFIRST,N
+      DO 10 J = IFIRST,NTOT
+          IF (NAME(J).EQ.JLIST(8)) JCMAX = J   ! Determine JCMAX before J.
           DO 5 L = 1,NN
               IF (NAME(J).EQ.JLIST(L+5)) THEN
                   JLIST(L) = J
@@ -67,16 +103,18 @@
           CM(K+3) = XDOT(K,ICM)
    25 CONTINUE
 *
-*       Set configuration pointers for KS candidates.
+*       Set configuration pointers for global transformations of X & XDOT.
       JLIST(7) = I1
       JLIST(8) = I2
+      JLIST(9) = I3
 *
 *       Place new global coordinates in the original locations.
       DO 30 L = 1,NN
           J = JLIST(L)
 *       Copy the respective masses (BODY(ICM) holds the sum).
-          IF (L.EQ.1) BODY(J) = BODYC(1)
-          IF (L.EQ.2) BODY(J) = BODYC(2)
+          IF (L.EQ.1) BODY(J) = BODYC(I1)
+          IF (L.EQ.2) BODY(J) = BODYC(I2)
+          IF (L.EQ.3) BODY(J) = BODYC(I3)
 *       Transform to global coordinates & velocities using c.m. values.
           LL = JLIST(L+6)
           DO 28 K = 1,3
@@ -103,29 +141,52 @@
       RIJ = SQRT(RIJ2)
 *
 *       Choose between initializing two single particles or a close pair.
-      IF (RIJ.GT.4.0*RMIN) THEN        ! 4*RMIN is a good compromise.
+      IF (RIJ.GT.4.0*RMIN.AND.JCOMP.LE.N) THEN   ! 4*RMIN is good compromise.
           CALL NBLIST(JCOMP,RS0)
           CALL FPOLY1(ICOMP,ICOMP,0)
           CALL FPOLY1(JCOMP,JCOMP,0)
           CALL FPOLY2(ICOMP,ICOMP,0)
           CALL FPOLY2(JCOMP,JCOMP,0)
-*         WRITE (6,33)  ICOMP, JCOMP, ICH, JCMAX, STEP(JCMAX), RIJ
-*  33     FORMAT (' CHAIN FPOLY INIT   IC JC ICH JCX SI RIJ ',
-*    &                                 4I6,1P,2E10.2)
-          I = JCMAX             ! Copied from REDUCE (only if NN > 2).
 *       Initialize single body #I different from ICOMP/JCOMP with small STEP.
-          IF (NN.GT.2.AND.STEP(I).LT.1.0D-04.AND.I.LE.N) THEN
-              IF (I.NE.ICOMP.AND.I.NE.JCOMP) THEN
+          IF (NN.GT.2) THEN
+              I = JCMAX          ! Do not use value from REDUCE. (bug 2/17).
+              IF (I.NE.ICOMP.AND.I.NE.JCOMP.AND.I.LE.N) THEN
                   RS0 = RS(I)
                   CALL NBLIST(I,RS0)
                   CALL FPOLY1(I,I,0)
                   CALL FPOLY2(I,I,0)
               END IF
+*       Perform initialization of inert binary using reserved NAMEC(10).
+              IF (NAME(I).EQ.NAMEC(10)) CALL RENEW(I)
           END IF
       ELSE
-*       Initialize KS regularization of dominant components (NN = 2).
+*       Include initialization of single (extra) member (NN/JCOMP decides).
+          IF (NN.GT.2.OR.JCOMP.GT.N) THEN
+              I = JCMAX             ! Determined from NAMEC and not REDUCE.
+              IF (JCOMP.GT.N) I = ICOMP
+              RS0 = RS(ICH)
+              CALL NBLIST(I,RS0)
+              CALL FPOLY1(I,I,0)
+              CALL FPOLY2(I,I,0)
+*       Re-initialize inert binary defined by JCOMP > N.
+              IF (JCOMP.GT.N) THEN
+                  CALL NBLIST(JCOMP,RS0)
+                  CALL FPOLY1(JCOMP,JCOMP,0)
+                  CALL FPOLY2(JCOMP,JCOMP,0)
+                  CALL RENEW(JCOMP)
+              END IF
+              NN = 0
+              NCH = 0
+              NSUB = MAX(NSUB - 1,0)
+              ECH = 0.0
+              NAMEC(10) = 0
+              IPHASE = -1
+              IF (JCOMP.GT.N) GO TO 80
+          END IF
+          IF (NAME(JCOMP).EQ.NAMEC(10)) GO TO 80
+*       Initialize KS regularization of dominant components.
+          IPHASE = 1
           CALL KSREG
-*
 *       Search for missing dominant bodies in perturber list.
           J1 = 2*NPAIRS - 1
           NP = LIST(1,J1)
@@ -144,9 +205,6 @@
                   LIST(NB1+1,J) = NTOT
                   LIST(1,J) = LIST(1,J) + 1
               END IF
-      IF (I0.GT.0) WRITE (6,37)  I0
-   37 FORMAT (' CATCH CHTERM2    I0 ',I4)
-      CALL FLUSH(6)
    40     CONTINUE
       END IF
 *
@@ -230,6 +288,6 @@
    60 CONTINUE
       IPHASE = -1
 *
-      RETURN
+   80 RETURN
 *
       END

@@ -40,7 +40,7 @@
           RIJ2 = A(1)*A(1) + A(2)*A(2) + A(3)*A(3)
 *
 *       Ensure that all neighbours are considered.
-          IF (RIJ2.GT.RCRIT2.AND.J.NE.NAMEJ) GO TO 60
+          IF (RIJ2.GT.RCRIT2*BODY(J)/BODYM.AND.J.NE.NAMEJ) GO TO 60
 *       Distant bodies do not contribute significantly to F2DOT & F3DOT.
 *
           IF (KCASE.GT.0) THEN

@@ -1,21 +1,21 @@
       SUBROUTINE SETSYS
 *
-*
 *       Selection of chain system.
 *       --------------------------
 *
       INCLUDE 'common6.h'
         REAL*8  M,MASS,MC
-        PARAMETER (NMX=10,NMX2=2*NMX,NMX3=3*NMX,NMX4=4*NMX,
-     &  NMX8=8*NMX,NMXm=NMX*(NMX-1)/2)
+        PARAMETER (NMX=10,NMX3=3*NMX,NMXm=NMX*(NMX-1)/2)
          COMMON/ARCHAIN/XCH(NMX3),VCH(NMX3),WTTL,M(NMX),
      &   XCDUM(NMX3),WCDUM(NMX3),MC(NMX),
      &   XI(NMX3),VI(NMX3),MASS,RINV(NMXm),RSUM,INAME(NMX),NN
       COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
      &                LISTC(LMAX)
       COMMON/CHREG/  TIMEC,TMAX,RMAXC,CM(10),NAMEC(NMX),NSTEP1,KZ27,KZ30
-      SAVE JSAVE
-      INTEGER JSAVE(3)
+      COMMON/BINARY/  ZM(4,MMAX),XREL(3,MMAX),VREL(3,MMAX),
+     &                HM(MMAX),UM(4,MMAX),UMDOT(4,MMAX),TMDIS(MMAX),
+     &                NAMEM(MMAX),NAMEG(MMAX),KSTARM(MMAX),IFLAG(MMAX)
+      INTEGER JSAVE(NMX)
 *
 *
 *       Check whether new (or renewed) chain or addition of member(s).
@@ -34,15 +34,6 @@
           GO TO 50
       END IF
 *
-*     CALL CHTRY
-*     DO 4 L = 1,NCH
-*         J = JLIST(L)
-*         NAMEC(L) = NAME(J)
-*         BODYC(L) = BODY(J)
-*         M(L) = BODY(J)
-*   4 CONTINUE
-*     IF (NCH.GT.0) GO TO 50
-*
 *       Initialize chain indices, names & masses for maximum membership.
       DO 5 L = 1,4
           JLIST(L) = 2*NPAIRS + L
@@ -53,7 +44,7 @@
       CM(9) = EBCH0
 *
 *       Include treatment for near-synchronous binary as inert body (B-B).
-      IF (JCLOSE.GT.N.AND.KZ(27).GT.0.AND.KZ(26).LT.2) THEN
+      IF (JCLOSE.GT.N) THEN
           RSUM = RMIN
           NCH = 2
           GO TO 10
@@ -66,8 +57,8 @@
           NAMEC(3) = NAME(JCLOSE)
           BODYC(3) = BODY(JCLOSE)
           M(3) = BODY(JCLOSE)
-*       See whether a second single body should be added.
-          IF (JCMAX.LE.N.AND.JCMAX.GE.IFIRST) THEN
+*       See whether a second single body NE.JCOMP should be added.
+          IF (JCMAX.LE.N.AND.JCMAX.GE.IFIRST.AND.JCMAX.NE.JCOMP) THEN
               JLIST(4) = JCMAX
               NAMEC(4) = NAME(JCMAX)
               BODYC(4) = BODY(JCMAX)
@@ -76,15 +67,17 @@
           END IF
       ELSE
           NCH = 4
+          GO TO 50
       END IF
-      IF (JCLOSE.EQ.0) NCH = 2
 *
-*       Check for addition of binary (NCH < 4).
-      IF (JCMAX.GT.N.AND.NCH.LT.4) THEN
+*       Check for addition of binary (NCH <= 4).
+      IF (JCMAX.GT.N.AND.NCH.LE.4) THEN
           KSP2 = JCMAX - N
           IF (KSP2.GT.KSPAIR) KSP2 = KSP2 - 1
           KSPAIR = KSP2
           JCOMP = 0
+*       Set JCMAX = 0 to avoid inclusion in last section.
+          JCMAX = 0
 *       Save current members to prevent over-writing in KSTERM.
           DO 6 L = 1,NCH
               JSAVE(L) = JLIST(L)
@@ -118,10 +111,11 @@
           M(NCH) = BODY(JCLOSE)
       ELSE
           KSPAIR = JCLOSE - N
-*       Check for synchronous tidal binary (save dormant energy in ECOLL).
-          IF (KZ(27).GT.0.AND.KZ(26).LT.2) THEN
+          J1 = 2*KSPAIR - 1
+*       Check for synchronous tidal binary (save internal energy in ECOLL).
+          IF (LIST(1,J1).EQ.0.AND.NCH.EQ.2) THEN
               SEMI = -0.5*BODY(JCLOSE)/H(KSPAIR)
-              IF (SEMI.LT.0.01*RSUM) THEN
+              IF (SEMI.LT.0.001*RSUM) THEN
                   NCH = NCH + 1
                   JLIST(NCH) = JCLOSE
                   NAMEC(NCH) = NAME(JCLOSE)
@@ -129,6 +123,7 @@
                   M(NCH) = BODY(JCLOSE)
 *       Define temporary KS ghost by saving masses and binding energy.
                   T0(2*KSPAIR-1) = 1.0E+06
+                  TEV(JCLOSE) = TIME + 2.0
                   LIST(1,2*KSPAIR-1) = 0
                   BODYC(9) = BODY(2*KSPAIR-1)
                   BODYC(10) = BODY(2*KSPAIR)
@@ -136,15 +131,32 @@
                   ECOLL = ECOLL + ZMU*H(KSPAIR)
                   BODY(2*KSPAIR-1) = 0.0D0
                   BODY(2*KSPAIR) = 0.0D0
+                  WRITE (6,11)  JCLOSE, NAME(JCLOSE), SEMI
+   11             FORMAT (' INERT BINARY    JCL NMJ SEMI ',2I7,1P,E10.2)
+*       Save NAME in unused location for termination.
+                  NAMEC(10) = NAME(JCLOSE)
                   GO TO 50
               END IF
           END IF
 *
 *       Re-activate any merged binary before terminating as last pair.
+          JG = 0
           IF (NAME(JCLOSE).LT.0) THEN
-              WRITE (6,15)  JCLOSE, RSUM,  R(JCLOSE-N)
-   15         FORMAT (/,5X,'WARNING!    SETSYS    JCLOSE RSUM R ',
-     &                                            I5,1P,2E10.2)
+*       Identify merger index and ghost for addition to chain.
+              DO 12 K = 1,NMERGE
+                  IF (NAMEM(K).EQ.NAME(JCLOSE)) THEN
+                      IM = K
+                  END IF
+   12         CONTINUE
+*       Note ghost must be single for maximum chain membership of 6.
+              DO 14 J = 1,N
+                  IF (BODY(J).EQ.0.0D0.AND.NAME(J).EQ.NAMEG(IM)) THEN
+                      JG = J
+                  END IF
+   14         CONTINUE
+              WRITE (6,15)  NAME(JCLOSE), NAME(JG), RSUM, R(JCLOSE-N)
+   15         FORMAT (' SETSYS HIARCH    NM NMG RSUM RB ',
+     &                                   I6,I5,1P,2E10.2)
               IPHASE = 7
               CALL RESET
               KSPAIR = NPAIRS
@@ -152,7 +164,7 @@
 *
 *       Save global indices of existing members (KSTERM uses JLIST).
           DO 16 L = 1,NCH
-              JPERT(L) = JLIST(L)
+              JSAVE(L) = JLIST(L)
    16     CONTINUE
 *
 *       Add energy of absorbed binary to the current initial energy.
@@ -171,32 +183,49 @@
           JCOMP = 0
           CALL KSTERM
 *
-*       Restore old members.
-          DO 18 L = 1,NCH
-              JLIST(L) = JPERT(L)
-   18     CONTINUE
-*
-*       Add terminated KS components to chain arrays.
+*       Copy current JSAVE and add terminated KS components to chain arrays.
           DO 20 L = 1,2
+              JLIST(L) = JSAVE(L)
               NCH = NCH + 1
               JLIST(NCH) = 2*NPAIRS + L
               NAMEC(NCH) = NAME(2*NPAIRS+L)
               BODYC(NCH) = BODY(2*NPAIRS+L)
               M(NCH) = BODY(2*NPAIRS+L)
    20     CONTINUE
+*
+*       See whether to include merger ghost (STOP on limit).
+          IF (JG.GT.0) THEN
+              NCH = NCH + 1
+              JLIST(NCH) = JG
+              NAMEC(NCH) = NAME(JG)
+              BODYC(NCH) = BODY(JG)
+              M(NCH) = BODY(JG)
+          END IF
+          IF (NCH.GT.6) THEN
+              WRITE (6,30)  NCH
+   30         FORMAT (' DANGER SETSYS LIMIT!    NCH ',I4)
+              STOP
+          END IF
+
       END IF
 *
+   50 CONTINUE
+*       Include addition of single perturber unless already done.
+      IF (JCMAX.GT.0.AND.JCMAX.NE.JCLOSE.AND.JCMAX.LE.N) THEN
+          DO 52 L = 1,NCH
+              IF (NAMEC(L).EQ.NAME(JCMAX)) GO TO 60
+   52     CONTINUE
+          IF (NAME(JCMAX).EQ.0) GO TO 60   ! Also exclude the chain c.m.
+          NCH = NCH + 1
+          JLIST(NCH) = JCMAX
+          NAMEC(NCH) = NAME(JCMAX)
+          BODYC(NCH) = BODY(JCMAX)
+          M(NCH) = BODY(JCMAX)
+          WRITE (6,55)  NCH, JCMAX, NAME(JCMAX)
+   55     FORMAT (' SETSYS SINGLE    NCH JCX NAME ',3I6)
+      END IF
 *       Specify membership for chain COMMON.
-   50 NN = NCH
-*
-*       Redetermine name of dominant body.
-      BX = 0.0
-      DO 60 L = 1,NCH
-          IF (BODYC(L).GT.BX) THEN
-              NAMEX = NAMEC(L)
-              BX = BODYC(L)
-          END IF
-   60 CONTINUE
+   60 NN = NCH
 *
       RETURN
 *

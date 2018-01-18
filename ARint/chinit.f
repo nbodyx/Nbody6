@@ -18,6 +18,7 @@
      &                NAMES(NCMAX,5),ISYS(5)
       COMMON/CCOLL2/  QK(NMX4),PK(NMX4),RIK(NMX,NMX),SIZE(NMX),VSTAR1,
      &                ECOLL1,RCOLL,QPERI,ISTAR(NMX),ICOLL,ISYNC,NDISS1
+      COMMON/ARZERO/  ISTAR0(NMX),SIZE0(NMX)     ! New procedure 10/16.
       COMMON/INCOND/  X4(3,NMX),XDOT4(3,NMX)
       COMMON/ECHAIN/  ECH
       COMMON/POSTN/  CVEL,TAUGR,RZ1,GAMMAZ,TKOZ,EMAX,TSP,KZ24,IGR,IPN
@@ -36,15 +37,15 @@
 *     END IF
       KZ24 = KZ(24)
       TAUGR = 1.3D+18*RAU**4/SMU**3
-      TSP = TOFF + TIME
+      TSP = TIME + TOFF
 *
 *       Define chain membership.
       CALL SETSYS
 *
       DO 15 L = 1,NCH
           J = JLIST(L)
-*         WRITE (6,77)  J, NAME(J), KSTAR(J), BODY(J)*SMU
-*  77     FORMAT (' CHINIT    J NM K* MJ ',3I6,F7.2)
+*         WRITE (6,77)  J, NAME(J), KSTAR(J), BODY(J)*SMU, RADIUS(J)*SU
+*  77     FORMAT (' CHINIT    J NM K* MJ R* ',3I6,2F7.2)
 *         CALL FLUSH(6)
           IF (J.LE.0) THEN
           WRITE (6,1)  NCH, L, J
@@ -52,7 +53,6 @@
           STOP
           END IF
    15 CONTINUE
-*     CALL FLUSH(6)
 *
 *       Initialize c.m. variables.
       DO 2 K = 1,7
@@ -65,6 +65,8 @@
           J = JLIST(L)
           SIZE(L) = RADIUS(J)
           ISTAR(L) = KSTAR(J)
+          SIZE0(L) = SIZE(L)
+          ISTAR0(L) = ISTAR(L)
 *       Place the system in first single particle locations.
           CM(7) = CM(7) + M(L)
           DO 3 K = 1,3
@@ -136,11 +138,11 @@
 *
 *       Set global index of c.m. body and save name (SUBSYS sets NAME = 0).
       IF (TIMEC.GT.0.0D0) ICH0 = ICH
-      ICH = JLIST(1)
-      ICH = JLIST(LX)
+*     ICH = JLIST(LX)
+      ICH = JLIST(1)         ! Reference body in first location (SJA 10/16).
       NAME0 = NAME(ICH)
 *
-*       Define subsystem indicator (ISYS = 1,2,3,4 for triple, quad, chain).
+*       Define subsystem index (ISYS = 1,2,3,4 for triple, quad, chain, ARC).
       ISYS(NSUB+1) = 4
 *
 *       Form ghosts and initialize c.m. motion in ICOMP = JLIST(NCH).

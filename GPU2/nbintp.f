@@ -1,4 +1,4 @@
-      SUBROUTINE NBINTP(I,IR,FIRR,FD,ISTAT)
+      SUBROUTINE NBINTP(I,IR,FIRR,FD,ISTAT,XNEW,XDNEW)
 *
 *
 *       Parallel irregular integration.
@@ -10,6 +10,7 @@
       COMMON/PREDICT/ TPRED(NMAX)
       INTEGER ISTAT
       REAL*8  XI(3),XIDOT(3),FIRR(3),FREG(3),FD(3),FDUM(3),DX(3),DV(3)
+      REAL*8  XNEW(3),XDNEW(3)
       REAL*8  CMX(3),CMV(3),XK(6),VK(6),FCM(3),FCMD(3),FP(6),FPD(6)
 *
 *
@@ -217,7 +218,7 @@
       DT2 = 2.0D0/DTSQ
       DTSQ12 = ONE12*DTSQ
       DT13 = ONE3*DT
-      T0(I) = TIME
+*     T0(I) = TIME
 *
       DO 80 K = 1,3
           DF = FI(K,I) - FIRR(K)
@@ -226,8 +227,8 @@
           AT3 = 2.0D0*DF + DT*SUM
           BT2 = -3.0D0*DF - DT*(SUM + FID)
 *
-          X0(K,I) = XI(K) + (0.6D0*AT3 + BT2)*DTSQ12
-          X0DOT(K,I) = XIDOT(K) + (0.75D0*AT3 + BT2)*DT13
+          XNEW(K) = XI(K) + (0.6D0*AT3 + BT2)*DTSQ12
+          XDNEW(K) = XIDOT(K) + (0.75D0*AT3 + BT2)*DT13
 *
           FI(K,I) = FIRR(K)
           FIDOT(K,I) = FD(K)
@@ -259,12 +260,14 @@
           DV2 = 0.0
           F2 = 0.0
           DO 85 K = 1,3
-              DV2 = DV2 + (XIDOT(K) - X0DOT(K,I))**2
+              DV2 = DV2 + (XIDOT(K) - XDNEW(K))**2
               F2 = F2 + FIRR(K)**2
    85     CONTINUE
 *       Employ Jun's criterion to avoid over-shooting (cf. Book, 2.16).
-          DTJ = STEP(I)*(1.0D-06*STEP(I)**2*F2/DV2)**0.1
-          TTMP = MIN(TTMP,DTJ)
+          IF (DV2.GT.0.0D0) THEN
+              DTJ = STEP(I)*(1.0D-06*STEP(I)**2*F2/DV2)**0.1
+          .   TTMP = MIN(TTMP,DTJ)
+          END IF
       END IF
       DT0 = TTMP
 *
@@ -291,7 +294,7 @@
 *
 *       Set new block step and update next time.
       STEP(I) = TTMP
-      TNEW(I) = STEP(I) + T0(I)
+      TNEW(I) = STEP(I) + TIME
 *
 *       See whether total force & derivative needs updating.
       IF (IR.EQ.0) THEN

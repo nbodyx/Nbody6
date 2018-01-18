@@ -137,10 +137,10 @@
       EMAX = SQRT(EMAX)
 *
 *       Form minimum eccentricity (Douglas Heggie, Sept. 1996).
-      AZ = A**2 + Z - 2.0
-      IF (AZ.GE.0.0) THEN
+      AZ2 = A**2 + Z - 2.0
+      IF (AZ2.GE.0.0) THEN
           AZ1 = 1.0 + Z - 4.0*A**2
-          EMIN2 = ONE6*(AZ1 - SQRT(AZ1**2 - 12.0*AZ))
+          EMIN2 = ONE6*(AZ1 - SQRT(AZ1**2 - 12.0*AZ2))
       ELSE
           EMIN2 = 1.0 - 0.5*(A**2 + Z)
       END IF
@@ -184,10 +184,9 @@
 *
 *       Check termination time for marginal stability criterion.
       IF (NAME(I).EQ.NAMEI.AND.(TIME+TOFF).GT.TCHECK) THEN
-          WRITE (6,17)  NAME(I), ECC, EMAX, ALPH, ZFAC, ECC1, PMIN1,
-     &                  PCRIT
-   17     FORMAT (' ECCMOD UNSTAB    NM E EX IN YF E1 PM PC ',
-     &                               I6,2F8.4,F7.1,F6.2,F7.3,1P,2E10.2)
+          WRITE (6,17)  NAME(I), ECC, EMAX, ALPH, ZFAC, ECC1, PMIN1
+   17     FORMAT (' ECCMOD UNSTAB    NM E EX IN YF E1 PM ',
+     &                               I6,2F8.4,F7.1,F6.2,F7.3,1P,E10.2)
           IQ = -4
           GO TO 40
       END IF
@@ -325,6 +324,7 @@
 *       Set partial interval and check remaining time.
       DT1 = MIN(DT0,0.1*TG*SQRT(1.0 - ECC**2)/TSTAR)
       IF (DTSUM + DT1.GT.DT0) DT1 = DT0 - DTSUM + 1.0D-12
+*
 *       Obtain quadrupole and tidal constants for each new binary.
       DTM = TIME - MAX(TEV0(I),TEV0(IG))
       IF (NAME(I).NE.NAMEI.OR.DTM.LE.DT0) THEN

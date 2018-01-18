@@ -567,7 +567,10 @@
       W0 = (SQRT(FR2*W2) + W1)/(SQRT(W1*W3) + W2)
       W0 = ETAR*W0
       TTMP = SQRT(W0)
-      DT0 = TTMP
+      VI2 = XDOT(1,I)**2 + XDOT(2,I)**2 + XDOT(3,I)**2
+      DT0 = 0.5*RS(I)/SQRT(VI2)
+      DT = MIN(DT0,SMAX)
+      DT0 = MIN(TTMP,DT)
 *
 *       Determine new regular step.
 *     TTMP = TSTEP(FREG,FDR,D2R(1,I),D3R(1,I),ETAR)

@@ -125,6 +125,8 @@
 *       Check coalescence condition again (bug 7/1/09).
       IF (SEP.LT.R1.OR.SEP.LT.R2) THEN
           COALS = .TRUE.
+          KW1 = KTYPE(KSTAR(I1),KSTAR(I2))
+          IF (KW1.GT.100) KW1 = KW1 - 100
       END IF
 *
 *       Skip small mass loss unless coalescence (May 2003).
@@ -350,11 +352,6 @@
               IF (KW1.GE.13.OR.KZ(25).GT.0) THEN
 *       Terminate KS binary and assign kick velocity to single star #I.
                   I = I1 + 2*(NPAIRS - IPAIR)
-                  IF (BODY(I1).GT.0.5*BODY(N+IPAIR)) THEN
-                      WRITE (6,32)  NAME(I1), BODY(I1)*SMU
-   32                 FORMAT (' DANGER EXPEL!    NM M ',I7,F7.2)
-                      STOP
-                  END IF
                   IF (ISKIP.GT.0) KW1 = KSTAR(I1)
                   CALL KSTERM
                   CALL KICK(I,1,KW1,DM)

@@ -173,8 +173,30 @@
           CALL KSTERM
       ELSE
 *       Reduce the steps by velocity factor.
-          STEP(IMAX) = MAX(STEP(IMAX)/A0,TIME - T0(IMAX))
-          STEPR(IMAX) = MAX(STEPR(IMAX)/A0,STEP(IMAX))
+          DT = MAX(STEP(IMAX)/A0,TIME - T0(IMAX))
+          CALL STEPK(DT,DTN)
+          STEP(IMAX) = DTN
+          ITER = 0
+   60     IF (DMOD(TIME,STEP(IMAX)).NE.0.0D0) THEN
+              STEP(IMAX) = 0.5D0*STEP(IMAX)
+              ITER = ITER + 1
+              IF (ITER.LT.16.OR.STEP(IMAX).GT.DTK(40)) GO TO 60
+              STEP(IMAX) = DTK(40)
+          END IF
+          T0(ICM) = TIME
+          T0R(ICM) = TIME
+          DTR = MAX(STEPR(IMAX)/A0,STEPR(IMAX))
+          CALL STEPK(DTR,DTN)
+          STEPR(IMAX) = DTN
+          ITER = 0
+   70     IF (DMOD(TIME,STEPR(IMAX)).NE.0.0D0) THEN
+              STEPR(IMAX) = 0.5D0*STEPR(IMAX)
+              ITER = ITER + 1
+              IF (ITER.LT.16.OR.STEPR(IMAX).GT.DTK(40)) GO TO 70
+              STEPR(IMAX) = DTK(40)
+          END IF
+          STEP(IMAX) = MIN(STEP(IMAX),STEPR(IMAX))
+          TNEW(IMAX) = TIME + STEP(IMAX)
       END IF
 *
 *       Set next mass loss time & current maximum mass before returning.

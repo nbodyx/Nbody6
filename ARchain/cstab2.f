@@ -4,12 +4,16 @@
 *       Degenerate triple chain stability test.
 *       ---------------------------------------
 *
-      INCLUDE '../Chain/commonc.h'
-      INCLUDE '../Chain/common2.h'
-      COMMON/CHREG/  TIMEC,TMAX,RMAXC,CM(10),NAMEC(6),NSTEP1,KZ27,KZ30
-      REAL*8  M,MB,MB1,R2(NMX,NMX),XCM(3),VCM(3),XX(3,3),VV(3,3),
+      IMPLICIT REAL*8 (A-H,M,O-Z)
+      PARAMETER (NMX=10,NMX3=3*NMX,NMXm=NMX*(NMX-1)/2)
+      COMMON/ARCHAIN/X(NMX3),V(NMX3),WTTL,M(NMX),
+     &   XC(NMX3),WC(NMX3),MC(NMX),
+     &   XI(NMX3),VI(NMX3),MASS,RINV(NMXm),RSUM,INAME(NMX),N
+      COMMON/CHREG/  TIMEC,TMAX,RMAXC,CM(10),NAMEC(NMX),NSTEP1,KZ27,KZ30
+      REAL*8  M,MB,MB1,MB2,R2(NMX,NMX),XCM(3),VCM(3),XX(3,3),VV(3,3),
      &        XCM3(3),VCM3(3)
       INTEGER  IJ(NMX)
+      SAVE
 *
 *
 *       Sort particle separations (I1 & I2 form closest pair).
@@ -73,7 +77,7 @@
       RB0 = SQRT(RB0)
       SEMI0 = 2.0/RB0 - VREL2/MB
       SEMI0 = 1.0/SEMI0
-      IF (SEMI0.LT.0.0.OR.ECC.GT.1.0.OR.ECC1.GT.1.0) GO TO 40
+      IF (SEMI0.LT.0.0.OR.ECC.GT.1.0.OR.ECC1.GT.0.9999) GO TO 40
       ECC0 = SQRT((1.0 - RB0/SEMI0)**2 + RDOT**2/(SEMI0*MB))
 *       Obtain the inclination (in radians).
       CALL INCLIN(XX,VV,XCM3,VCM3,ALPHA)
@@ -92,13 +96,15 @@
           ITERM = -1
           WRITE (6,20)  ECC, ECC1, SEMI, SEMI1, PMIN, QST*SEMI
    20     FORMAT (' CSTAB2    E =',F6.3,'  E1 =',F6.3,'  A =',1P,E8.1,
-     &                     '  A1 =',E8.1,'  PM =',E9.2,'  PC =',E9.2)
-          WRITE (6,25)  NAMEC(I1), NAMEC(I2), ECC0, SEMI0, PMIN0, PCRIT0
-   25     FORMAT (' INNER TRIPLE    NAM E0 A0 PM0 PC0 ',
-     &                              2I6,F7.3,1P,3E10.2)
+     &                     '  A1 =',E8.1,'  PM =',E9.2,'  PC =',E9.2,
+     &                     '  QST =',0P,F5.1)
+          WRITE (6,25)  NAMEC(I1), NAMEC(I2), ECC0, SEMI0, PMIN0,
+     &                  PCRIT0, QST
+   25     FORMAT (' INNER TRIPLE    NAM E0 A0 PM0 PC0 QST ',
+     &                              2I6,F7.3,1P,3E10.2,0P,F5.1)
           RI = SQRT(CM(1)**2 + CM(2)**2 + CM(3)**2)
           WRITE (81,30)  TIMEC, RI, NAMEC(I3), ECC, ECC1
-     &                   SEMI, SEMI1, PCRIT/PMIN, 180.*ALPHA/3.14
+     &                   SEMI, SEMI1, PCRIT/PMIN, 180.*ALPHA/3.1415
    30     FORMAT (' CSTAB2   ',F9.5,F5.1,I6,2F6.3,1P,E10.2,0P,F6.1)
           CALL FLUSH(81)
       END IF

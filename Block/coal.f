@@ -357,6 +357,7 @@
 *
 *       See whether closest neighbour forms a KS pair (skip chain).
       IF (IPAIR.GT.0.AND.BODY(I1).GT.0.0D0) THEN
+          JMIN = N + 1
           IF (JMIN.LE.N.AND.RIJ2.LT.RMIN2) THEN
               DO 35 K = 1,3
                   X0DOT(K,JMIN) = XDOT(K,JMIN)

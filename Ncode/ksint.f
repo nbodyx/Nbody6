@@ -123,11 +123,11 @@
 *       Skip outward motion or separation > 5*RMIN.
                   IF ((RDX.GE.0.0.OR.RP.GT.5.0*RMIN).AND.
      &                IPN.LE.1) GO TO 100
-*                 WRITE (6,220)  TIME+TOFF, NAME(JCLOSE), KSTAR(I1),
-*    &                           KSTAR(I2), LIST(1,I1), GAMMA(IPAIR),
-*    &                           SEMI, R(IPAIR)
-* 220             FORMAT (' ACTIVATE CHAIN    T NMJ K* NP G A R ',
-*    &                                        F9.1,I7,3I4,1P,3E10.2)
+                  WRITE (6,220)  TIME+TOFF, NAME(JCLOSE), KSTAR(I1),
+     &                           KSTAR(I2), LIST(1,I1), GAMMA(IPAIR),
+     &                           SEMI, R(IPAIR)
+  220             FORMAT (' ACTIVATE CHAIN    T NMJ K* NP G A R ',
+     &                                        F9.1,I7,3I4,1P,3E10.2)
                   KSPAIR = IPAIR
 *       Restore unperturbed motion from BRAKE4 (NP = 0 fixes some problem).
                   IF (GAMMA(IPAIR).LT.1.0D-10) THEN
@@ -138,7 +138,6 @@
 *       Include case of binary as dominant perturber.
                   IF (JCLOSE.GT.N) THEN
                       KS2 = JCLOSE - N
-                      IF (KS2.GT.KSPAIR) KS2 = KS2 - 1
                       JCOMP = JCLOSE
                       JP = JCLOSE - N
                       WRITE (6,225)  KSPAIR, KS2, JCLOSE, RP, GAMMA(JP)
@@ -166,7 +165,12 @@
 *       Save old radial velocity & relative perturbation and set new GAMMA.
       RDOT = TDOT2(IPAIR)
 *     G0 = GAMMA(IPAIR)
-      GI = SQRT(FP(1)**2 + FP(2)**2 + FP(3)**2)*R(IPAIR)**2*BODYIN
+      IF (BODY(I).LT.100.0*BODYM) THEN
+          GI = SQRT(FP(1)**2 + FP(2)**2 + FP(3)**2)*R(IPAIR)**2*BODYIN
+      ELSE
+          ZMU = BODY(I1)*BODY(I2)*BODYIN
+          GI = SQRT(FP(1)**2 + FP(2)**2 + FP(3)**2)*R(IPAIR)**2/ZMU
+      END IF
       GAMMA(IPAIR) = GI
 *
 *       Apply the Hermite corrector.
@@ -367,8 +371,7 @@
                   IF (GI*(RAP/RI)**2.LT.0.1) IQ = .FALSE.
               END IF
               IF (GI.GT.0.1.AND.RI.GT.RMIN) IQ = .TRUE.
-              IF (GI.GT.0.02.AND.RI.GT.5.0*RMIN) IQ = .TRUE.
-              IF (GI.GT.0.25) IQ = .TRUE.
+              IF (GI.GT.0.01) IQ = .TRUE.
 *       Include extra condition for planet case.
               IF (MIN(BODY(I1),BODY(I2)).LT.0.05*BODYM) THEN
                   IF (GI.GT.2.0D-04) IQ = .TRUE.
@@ -759,52 +762,53 @@
 *
 *       Check optional BH condition (prevents mass-loss complications).
           IF (KZ(11).LE.-2) THEN
-              IF (KSTAR(I1).NE.14.OR.KSTAR(I2).NE.14) GO TO 88
+              IF (KSTAR(I1).NE.14.OR.KSTAR(I2).NE.14) GO TO 89
           END IF
 *
-*       Enlarge the search distance by mass ratio factor.
-          RCR2 = RMIN2*BODY(I)/BODYM
-          RCR2 = 16.0*MAX(RMIN22,RCR2)
+*       Search for the maximum and second strongest interaction (RD < 0).
           NNB1 = LIST(1,I1) + 1
           RX2 = 1000.0
           JCLOSE = 0
           JCMAX = 0
-          NCL = 0
+          FMAX = 0.0
+          FMAX2 = 0.0
           DO 85 L = 2,NNB1
               J = LIST(L,I1)
-              RIJ2 = (X(1,I) - X(1,J))**2 + (X(2,I) - X(2,J))**2 +
-     &                                      (X(3,I) - X(3,J))**2
+              IF (NAME(J).LT.0) GO TO 85
               RD = (X(1,I)-X(1,J))*(XDOT(1,I)-XDOT(1,J)) +
      &             (X(2,I)-X(2,J))*(XDOT(2,I)-XDOT(2,J)) +
      &             (X(3,I)-X(3,J))*(XDOT(3,I)-XDOT(3,J))
-              IF (RIJ2.LT.RCR2) THEN
-                  IF (RIJ2.LT.RX2) THEN
-*       Allow for extra perturber using JCMAX procedure in SETSYS.
-                      NCL = NCL + 1
-*       Note JCLOSE comes first in sequential list and may not be dominant.
-                      IF (NCL.EQ.1) THEN
-                          RX2 = RIJ2
-                          RRD = RD
-                          JCLOSE = J
-                          VIJ2 = (XDOT(1,I) - XDOT(1,J))**2 +
-     &                           (XDOT(2,I) - XDOT(2,J))**2 +
-     &                           (XDOT(3,I) - XDOT(3,J))**2
-                      ELSE IF (NCL.EQ.2) THEN
-                          JCMAX = J
-                          FMAX = (BODY(I) + BODY(J))/RIJ2
-*       See whether the third strong perturber dominates the second.
-                      ELSE IF (NCL.EQ.3.AND.J.LE.N) THEN
-                          FIJ = (BODY(I) + BODY(J))/RIJ2
-                          IF (FIJ.GT.FMAX) THEN
-                              JCMAX = J
-                          END IF
-                      END IF
-                  END IF
+              IF (RD.GE.0.0) GO TO 85
+              RIJ2 = (X(1,I) - X(1,J))**2 + (X(2,I) - X(2,J))**2 +
+     &                                      (X(3,I) - X(3,J))**2
+              IF (RIJ2.GT.25.0*RMIN2) GO TO 85
+              FIJ = (BODY(I) + BODY(J))/RIJ2
+              IF (FIJ.GT.FMAX) THEN
+                  FMAX2 = FMAX
+                  JCMAX = JCLOSE
+                  FMAX = FIJ
+                  JCLOSE = J
+                  RRD = RD
+                  RX2 = RIJ2
+                  VIJ2 = (XDOT(1,I) - XDOT(1,J))**2 +
+     &                   (XDOT(2,I) - XDOT(2,J))**2 +
+     &                   (XDOT(3,I) - XDOT(3,J))**2
+*       Note no distance limit for #JCLOSE because of binary perturbation.
+              ELSE IF (FIJ.GT.FMAX2) THEN
+                  FMAX2 = FIJ
+                  JCMAX = J
               END IF
    85     CONTINUE
 *
+*       Consider additional conditions for body #JCLOSE.
           IF (JCLOSE.EQ.0) GO TO 88
           IF (NAME(JCLOSE).LE.0) GO TO 88
+          IF (JCMAX.GT.0) THEN
+              IF (NAME(JCMAX).LE.0) JCMAX = 0
+          END IF
+*       Adopt a 10 % criterion for the second strongest force.
+*         IF (FMAX2.LT.0.1*FMAX) JCMAX = 0
+*
 *       Include delay time to avoid repeat events (DANGER: do not use GPERT).
           IF (TTOT.GT.TIME_CH.OR.GI.GT.0.2) THEN
 *       Skip chain selection if close perturber > 5*SEMI or impact > 5*SEMI.
@@ -844,10 +848,10 @@
 *
               EB = BODY(I1)*BODY(I2)*HI*BODYIN
               EORB = -0.5*BODY(I)*BODY(JCLOSE)/SEMI1
-              WRITE (6,87)  TTOT, NAME(JCLOSE), NCL, LIST(1,I1),
-     &                      SEMI, RX, EB, EORB, GI
-   87         FORMAT (' NEW CHAIN    T NMJ NCL NP A RX EB EORB GI ',
-     &                               F9.3,I6,2I4,1P,5E10.2)
+              WRITE (6,87)  TTOT, NAME(JCLOSE), LIST(1,I1), SEMI, RX,
+     &                      EB, EORB, GI
+   87         FORMAT (' NEW CHAIN    T NMJ NP A RX EB EORB GI ',
+     &                               F9.3,I6,I4,1P,5E10.2)
 *       Set next new chain time to avoid escaper being absorbed.
               TIME_CH = TTOT + 0.001
 *       Initiate chain regularization directly (B-B or B-S: see IMPACT).
@@ -860,21 +864,20 @@
                   KS2 = 0
               ELSE
                   KS2 = JCLOSE - N
-*       Reduce c.m. body location and pair index if IPAIR terminated first.
-                  IF (KS2.GT.IPAIR) JCLOSE = JCLOSE - 1
-                  IF (KS2.GT.IPAIR) KS2 = KS2 - 1
               END IF
 *       Initialize new ARchain or standard chain.
               CALL DELAY(1,KS2)
               GO TO 100
-          ELSE
-*       Reset indicators to zero after unsuccessful test.
-              JCLOSE = 0
-              JCMAX = 0
           END IF
+      ELSE
+          GO TO 89
       END IF
+*
+*       Reset indicators to zero after unsuccessful test.
+   88 JCLOSE = 0
+      JCMAX = 0
 *       Include KS termination for failed chain test.
-   88 IF (IQ) GO TO 90
+   89 IF (IQ) GO TO 90
 *
 *       Check optional search criterion for multiple encounter or merger.
       IF (KZ(15).GT.0.AND.STEP(I).LT.DTMIN) THEN

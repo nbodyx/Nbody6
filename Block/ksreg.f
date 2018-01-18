@@ -10,6 +10,13 @@
       EXTERNAL RENAME
 *
 *
+*       Ensure ICOMP < JCOMP.
+      IF (ICOMP.GT.JCOMP) THEN
+          ISAVE = ICOMP
+          ICOMP = JCOMP
+          JCOMP = ISAVE
+      END IF
+*
 *       Save updated regular force & derivative for new KSINIT procedure.
       DTR = TIME - T0R(ICOMP)
       DO K = 1,3
@@ -19,12 +26,21 @@
 *
 *       Replace #JCOMP by arbitrary body in case it is the only neighbour.
       NNB = LIST(1,ICOMP)
-      IF (NNB.EQ.1.AND.LIST(2,ICOMP).EQ.JCOMP) THEN
-          LIST(2,ICOMP) = JCOMP + 1
-          IF (JCOMP + 1.GT.NTOT) THEN
-              LIST(2,ICOMP) = MAX(ICOMP-1,IFIRST+2)
+      DO L = 2,NNB+1
+          J = LIST(L,ICOMP)
+          IF (J.NE.JCOMP.AND.BODY(J).GT.0d0) THEN
+              GO TO 101
+          ENDIF
+      END DO
+*
+      DO J = IFIRST+2,NTOT
+          IF (J.NE.ICOMP.AND.J.NE.JCOMP.AND.BODY(J).GT.0d0) THEN
+              LIST(1,ICOMP) = LIST(1,ICOMP) + 1
+              LIST(2,ICOMP) = J
+              GO TO 101
           END IF
-      END IF
+      END DO
+  101 CONTINUE
 *
 *       Copy neighbour list of #ICOMP without JCOMP.
       NNB1 = 1
@@ -136,16 +152,27 @@
    20     IF (LIST(1,I).GT.0.AND.LIST(2,I).LT.IFIRST) THEN
               J2 = LIST(2,I)
               J = KVEC(J2) + N
-              NNB = LIST(1,I)
-              DO 25 L = 2,NNB+1
-                  IF (L.LE.NNB.AND.LIST(L+1,I).LT.J) THEN
-                      LIST(L,I) = LIST(L+1,I)
+              IF (LIST(1,I).EQ.1) THEN
+                  LIST(2,I) = J
+              ELSE
+                  L = 2
+   22             JNEXT = LIST(L+1,I)
+                  IF (JNEXT.LT.J) THEN
+                      LIST(L,I) = JNEXT
+                      L = L + 1
+                      IF (L.LE.LIST(1,I)) GO TO 22
+                      LIST(L,I) = J
+                  ELSE IF (JNEXT.EQ.J) THEN
+                      DO 25 LL = L,LIST(1,I)
+                          LIST(LL,I) = LIST(LL+1,I)
+   25                 CONTINUE
+                      LIST(1,I) = LIST(1,I) - 1
                   ELSE
                       LIST(L,I) = J
-*       Check again until first neighbour > 2*NPAIRS.
-                      GO TO 20
                   END IF
-   25         CONTINUE
+*       Check again until first neighbour > ICOMP.
+                  GO TO 20
+              END IF
           END IF
    30 CONTINUE
 *

@@ -14,8 +14,8 @@
       CHARACTER*8  WHICH1
       REAL*8  XX(3,3),VV(3,3)
       INTEGER LISTQ(100)
-      SAVE LISTQ,QCHECK
-      DATA IZARE,LISTQ(1),QCHECK /0,0,0.0D0/
+      SAVE LISTQ,INC0,QCHECK
+      DATA IZARE,LISTQ(1),INC0,QCHECK /0,0,0,0.0D0/
 *
 *
 *       Set index of KS pair & both components of c.m. body #I.
@@ -26,6 +26,7 @@
       JCL = IFIRST
       KS2 = 0
       RMAX2 = 1.0
+      RJMIN2 = 1.0
       TTOT = TIME + TOFF
       RI2 = (X(1,I) - RDENS(1))**2 + (X(2,I) - RDENS(2))**2 +
      &                               (X(3,I) - RDENS(3))**2
@@ -51,6 +52,7 @@
           PERT = BODY(J)/(RIJ2*SQRT(RIJ2))
           IF (PERT.GT.PERT2) THEN 
               IF (PERT.GT.PERT1) THEN
+                  RMAX2 = RJMIN2
                   RJMIN2 = RIJ2
                   JMAX = JCL
                   JCL = J
@@ -309,6 +311,7 @@
 *
       WHICH1 = ' TRIPLE '
       IF (JCL.GT.N) WHICH1 = ' QUAD   '
+      IF (JCL.GT.N) GO TO 100
       IF (KCHAIN.GT.0) THEN
           IF (TTOT.LT.TIME_CH) GO TO 100
           WHICH1 = ' CHAIN  '
@@ -334,13 +337,12 @@
       END IF
 *
 *       Include any close single or c.m. perturber (cf. routine SETSYS).
-      IF (JMAX.NE.JCL.AND.SQRT(RMAX2).LT.MIN(2.0D0*RSUM,RMIN).AND.
-     &    NAME(JMAX).GT.0) THEN
+      IF (JMAX.NE.JCL.AND.SQRT(RMAX2).LT.RMIN.AND.NAME(JMAX).GT.0) THEN
           IF (JCL.GT.N.AND.JMAX.GT.N) THEN
               JCMAX = 0
           ELSE
-              WRITE (6,21)  NAME(JCL), NAME(JMAX), RSUM, SQRT(RMAX2)
-   21         FORMAT (' B+2 CHAIN    NAM RSUM RMX ',2I7,1P,2E10.2)
+              WRITE (6,21)  NAME(JCL), NAME(JMAX), SQRT(RMAX2)
+   21         FORMAT (' B+2 CHAIN    NAM RMX ',2I7,1P,E10.2)
               CALL XVPRED(JMAX,-1)
               JCMAX = JMAX
           END IF
@@ -368,9 +370,9 @@
                   JPAIR = IPAIR
                   IPAIR = KPAIR
                   JCLOSE = N + JPAIR
+                  I1 = 2*IPAIR - 1
+                  J1 = 2*JPAIR - 1
               END IF
-*       Check reduction of c.m. index (JPAIR becomes JPAIR - 1 if > IPAIR).
-              IF (JPAIR.GT.IPAIR) JCLOSE = JCLOSE - 1
 *       Include extra condition for inert binary approximation (9/3/12).
               IF (KZ(26).LT.2.AND.RIJ.GT.250.0*SEMI0) THEN
 *       Replace unperturbed near-synchronous binary by inert body in CHAIN.
@@ -397,12 +399,6 @@
           ELSE
               KS2 = JPAIR
           END IF
-          IF (KZ(27).LE.0.AND.JPAIR.GT.IPAIR) THEN
-              IF (JCLOSE.GT.0) JCLOSE = JCLOSE - 1
-          END IF
-*       Terminate smallest pair first and reduce second index if higher.
-*         CALL KSTERM
-          IF (KS2.GT.KSPAIR) KS2 = KS2 - 1
       END IF
 *
 *       See whether chain regularization indicator should be switched on.
@@ -578,7 +574,7 @@
 *
 *       Estimate relative perturbation at apocentre from actual value.
       GI = PERT*(SEMI1*(1.0 + ECC1)/RIJ)**3
-      IF (PERT.GT.GMAX.OR.GI.GT.0.005) GO TO 100
+      IF (PERT.GT.GMAX.OR.GI.GT.0.02) GO TO 100
       IF (SEMI1.LT.0.0.AND.RIJ.GT.10.0*SEMI) GO TO 100
 *
 *       Switch to direct integration for planetary systems if GI > 1D-04.
@@ -696,7 +692,7 @@
           BJ = BODY(JCL)
           EOUT = ECC1
 *       Increase tolerance near sensitive stability boundary (RM 10/2008).
-          IF (EOUT.GT.0.8) THEN
+          IF (EOUT.GT.0.8.AND.EOUT.LT.0.99) THEN
               DE = 0.5*(1.0 - EOUT)
               DE = MIN(DE,0.01D0)
 *       Evaluate outer eccentricity derivative due to dominant perturber.
@@ -706,7 +702,7 @@
                   IF (ECCDOT.GT.0.0) THEN
                       TK1 = TWOPI*SEMI1*
      &                      SQRT(SEMI1/(BODY(I) + BODY(JCL)))
-                      DE = DE - 10.0*MIN(ECCDOT*TK1,0.001D0)
+                      DE = DE - MIN(ECCDOT*TK1,0.001D0)
 *                     WRITE (6,443)  ECC1, DE, ECCDOT, TK1, PERT
 * 443                 FORMAT (' EDOT!!    E1 DE ED TK G ',
 *    &                                    2F9.5,1P,3E9.1)
@@ -717,8 +713,12 @@
               EOUT = MIN(EOUT - DE,0.9999D0)
           END IF
           PMIN = SEMI1*(1.0 - EOUT)
-*       Choose between Mardling 2007 and Valtonen 2015 criterion.
-          NST = NSTAB(SEMI,SEMI1,ECC,EOUT,ANGLE,BODY(I1),BODY(I2),BJ)
+*       Choose between Mardling 2007 and Valtonen 2015 criterion (KZ(48) >0).
+          IF (KZ(48).GT.0) THEN
+             NST = NSTAB(SEMI,SEMI1,ECC,EOUT,ANGLE,BODY(I1),BODY(I2),BJ)
+          ELSE
+             NST = 0
+          END IF
           QST = QSTAB(ECC,EOUT,ANGLE,BODY(I1),BODY(I2),BJ)
           RP = PMIN/SEMI
           IF (QST.LT.RP) THEN
@@ -726,14 +726,17 @@
               IF (NST.NE.0.AND.KZ(48).GT.0) THEN
                   Q3 = BJ/(BODY(I1) + BODY(I2))
                   INC = 360.0*ANGLE/TWOPI
-                  WRITE (88,440)  TIME+TOFF, ECC, EOUT, INC, Q3, RP,
-     &                            QST, NST
+                  IF (IABS(INC - INC0).GE.5) THEN
+                      INC0 = INC
+                      WRITE (88,440)  TIME+TOFF, ECC, EOUT, INC, Q3, RP,
+     &                                QST, NST
   440             FORMAT (' STABTEST   T E E1 I M3/MB RP/A QST NST ',
      &                                 F6.1,2F6.2,I5,F5.1,2F6.1,I3)
-                  CALL FLUSH(88)
+                      CALL FLUSH(88)
+                  END IF
               END IF
-*       Reduce the limit slightly, also allowing for perturbation.
-              PCRIT = 0.99*PMIN*(1.0 - PERT)
+*       Increase the limit slightly, also allowing for perturbation.
+              PCRIT = 1.01*PMIN*(1.0 - PERT)
               PCR = QST*SEMI
               IF (PCRIT.LT.YFAC*PCR.AND.PERT.LT.0.02.AND.
      &            NMTRY.LT.10) THEN
@@ -941,7 +944,6 @@
 *       Save KS index and delay merger until end of block step.
       IF (JCLOSE.GT.N) THEN
           KS2 = JCLOSE - N
-          IF (KS2.GT.IPAIR) KS2 = KS2 - 1
       ELSE
           KS2 = 0
       END IF

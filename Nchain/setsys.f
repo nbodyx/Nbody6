@@ -17,8 +17,7 @@
       COMMON/BINARY/  ZM(4,MMAX),XREL(3,MMAX),VREL(3,MMAX),
      &                HM(MMAX),UM(4,MMAX),UMDOT(4,MMAX),TMDIS(MMAX),
      &                NAMEM(MMAX),NAMEG(MMAX),KSTARM(MMAX),IFLAG(MMAX)
-      SAVE JSAVE
-      INTEGER JSAVE(3)
+      INTEGER JSAVE(NMX)
 *
 *
 *       Check whether new (or renewed) chain or addition of member(s).
@@ -47,7 +46,7 @@
       CM(9) = EBCH0
 *
 *       Include treatment for near-synchronous binary as inert body (B-B).
-      IF (JCLOSE.GT.N.AND.KZ(26).LT.2) THEN
+      IF (JCLOSE.GT.N.AND.KZ(27).GT.0) THEN
           RSUM = RMIN
           NCH = 2
           GO TO 10
@@ -110,10 +109,11 @@
           M(NCH) = BODY(JCLOSE)
       ELSE
           KSPAIR = JCLOSE - N
+          J1 = 2*KSPAIR - 1
 *       Check for synchronous tidal binary (save dormant energy in ECOLL).
-          IF (KZ(27).GT.0.AND.KZ(26).LT.2) THEN
+          IF (KZ(27).GT.0.AND.LIST(1,J1).EQ.0) THEN
               SEMI = -0.5*BODY(JCLOSE)/H(KSPAIR)
-              IF (SEMI.LT.0.01*RSUM) THEN
+              IF (SEMI.LT.0.001*RSUM) THEN
                   NCH = NCH + 1
                   JLIST(NCH) = JCLOSE
                   NAMEC(NCH) = NAME(JCLOSE)
@@ -128,6 +128,8 @@
                   ECOLL = ECOLL + ZMU*H(KSPAIR)
                   BODY(2*KSPAIR-1) = 0.0D0
                   BODY(2*KSPAIR) = 0.0D0
+                  WRITE (6,11)  NAME(J1), SEMI
+   11             FORMAT (' INERT BINARY    NM SEMI ',I6,1P,E10.2)
                   GO TO 50
               END IF
           END IF
@@ -147,7 +149,7 @@
                       JG = J
                   END IF
    14         CONTINUE
-              WRITE (6,15)  NAME(JCLOSE), NAME(JG), RSUM,  R(JCLOSE-N)
+              WRITE (6,15)  NAME(JCLOSE), NAME(JG), RSUM, R(JCLOSE-N)
    15         FORMAT (' SETSYS HIARCH    NM NMG RSUM RB ',
      &                                   I6,I5,1P,2E10.2)
               IPHASE = 7
@@ -157,7 +159,7 @@
 *
 *       Save global indices of existing members (KSTERM uses JLIST).
           DO 16 L = 1,NCH
-              JPERT(L) = JLIST(L)
+              JSAVE(L) = JLIST(L)
    16     CONTINUE
 *
 *       Add energy of absorbed binary to the current initial energy.
@@ -176,20 +178,17 @@
           JCOMP = 0
           CALL KSTERM
 *
-*       Restore old members.
-          DO 18 L = 1,NCH
-              JLIST(L) = JPERT(L)
-   18     CONTINUE
-*
-*       Add terminated KS components to chain arrays.
+*       Copy current JSAVE and add terminated KS components to chain arrays.
           DO 20 L = 1,2
+              JLIST(L) = JSAVE(L)
               NCH = NCH + 1
               JLIST(NCH) = 2*NPAIRS + L
               NAMEC(NCH) = NAME(2*NPAIRS+L)
               BODYC(NCH) = BODY(2*NPAIRS+L)
               M(NCH) = BODY(2*NPAIRS+L)
    20     CONTINUE
-*       See whether to include merger ghost.
+*
+*       See whether to include merger ghost (STOP on limit).
           IF (JG.GT.0) THEN
               NCH = NCH + 1
               JLIST(NCH) = JG
@@ -199,7 +198,7 @@
           END IF
           IF (NCH.GT.6) THEN
               WRITE (6,30)  NCH
-   30         FORMAT (' DANGER!    NCH ',I4)
+   30         FORMAT (' DANGER SETSYS LIMIT!    NCH ',I4)
               STOP
           END IF
       END IF

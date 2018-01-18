@@ -49,11 +49,6 @@
 *       Re-define initial epoch for consistency (ignore phase error).
       T0S(ISUB) = TIME - TIMEC
 *
-      IF (KZ(30).GT.2) THEN
-          WRITE (6,1)  TIME+TOFF, DT2, DT8
-    1     FORMAT (' ABSORB:    TIME DT2 DT8 ',F12.6,1P,2E10.2)
-      END IF
-*
 *       Increase membership of chain (JCLOSE: single body or KS pair).
       NCH0 = NCH
       CALL SETSYS

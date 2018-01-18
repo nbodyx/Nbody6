@@ -1,4 +1,4 @@
-      SUBROUTINE BRAKE4(I1,I2,KCASE,DT1)
+      SUBROUTINE BRAKE4(I1,I2,KCASE,DW)
 *
 *
 *       GR analytical orbit shrinkage.
@@ -28,8 +28,8 @@
       IF (CVEL.EQ.0.0D0) CVEL = CLIGHT
 *
 *       Employ Einstein shift above 1.0D-04 per orbit for decision-making.
-      DW = 3.0*TWOPI*(BODY(I1) + BODY(I2))/(SEMI*CVEL**2*(1.0-E2))
-      IF (DW.LT.1.0D-04.OR.DW.GT.1.0D-03) GO TO 100
+      DW = 3.0*TWOPI*(BODY(I))/(SEMI*CVEL**2*(1.0-E2))
+      IF (DW.LT.1.0D-04.OR.DW.GT.1.1D-03) GO TO 100   ! Note limit 0.0011.
 *
 *       Form da/dt & de/dt according to Peters 1964.
       ADOT =  64.0/5.0*M1*M2*(M1+M2)/(CVEL**5*SEMI**3*(1.0 - E2)**3.5)
@@ -44,15 +44,14 @@
           UIDOT(K) = UDOT(K,IPAIR)
     2 CONTINUE
 *
-      TK = TWOPI*SEMI*SQRT(SEMI/(BODY(I1) + BODY(I2)))
+      TK = TWOPI*SEMI*SQRT(SEMI/BODY(I))
+      DT1 = STEP(I1)
       THETA = DW*DT1/TK
-*       Impose limit on time-step if THETA > TWOPI.
+*       Impose limit if THETA > TWOPI but use full STEP(I1) for change.
       IF (THETA.GT.TWOPI) THEN
-          DT1 = TWOPI*TK/DW
           THETA = DMOD(THETA,TWOPI)
       END IF
       DT = DT1
-      T00 = T0(I1)
 *
 *       Rotate KS orbit by THETA/2 (period halving).
       CALL KSROT(UI,UIDOT,THETA)
@@ -85,14 +84,12 @@
    20     FORMAT (' PN WARNING    NM A A1 ADOT*DT ',I6,1P,3E10.2)
       END IF
 *
-*       Update binding energy and collision energy.
+*       Update binding energy and collision energy (zero on first call).
       HI = H(IPAIR)
       H(IPAIR) = -0.5*BODY(I)/SEMI1
       ZMU = BODY(I1)*BODY(I2)/BODY(I) 
       ECOLL = ECOLL + ZMU*(HI - H(IPAIR))
       HIP = H(IPAIR)
-      NSTEPQ = NSTEPQ + 1
-      IF (NSTEPQ.GT.50000000) NSTEPQ = 0
 *
 *       Change KS variables at original ECC and modify ECC at H = const.
       CALL EXPAND2(IPAIR,SEMI)
@@ -101,35 +98,30 @@
       CALL DEFORM2(IPAIR,ECC,ECC1)
 *
 *       Re-initialize the KS binary (unperturbed case also needed).
-      IMOD = 1
+*     IMOD = 1
       CALL RESOLV(IPAIR,1)
-      CALL KSPOLY(IPAIR,IMOD)
-*       Restore the originat values of STEP T0.
-      STEP(I1) = DT1
-      T0(I1) = T00
+*     CALL KSPOLY(IPAIR,IMOD)
 *
       ITER = ITER + 1
-      II = 1000
-      IF (DW.GT.5.0D-04) II = 10000     ! Need to reduce output.
-      IF (DW.GT.8.0D-04) II = 50000     ! Further reduction.
-      IF (ITER.LT.1000.OR.MOD(ITER,II).EQ.0) THEN
+      IF (ITER.LT.1000.OR.MOD(ITER,1000).EQ.0) THEN
           WRITE (94,30)  TIME+TOFF, ECC, THETA, DT, TGR, SEMI, DW
    30     FORMAT (' GR SHRINK    T E TH DT TGR A DW ',
      &                           F11.4,F9.5,1P,3E9.1,E12.4,E10.2)
           CALL FLUSH(94)
+          IF (ITER.GT.2000000000) ITER = 1000
       END IF
 *
-*       Check KS termination with added perturber to activate PN.
+*       Check KS termination for weak PN.
       IF (DW.GT.1.0D-03) THEN
 *       Note that first order Peters formulation is not valid for strong GR.
-          JP = LIST(2,I)
-          LIST(1,I1) = 1
-          LIST(2,I1) = JP
+*         JP = LIST(2,I)
+*         LIST(1,I1) = 1      ! Suppressed 06/16.
+*         LIST(2,I1) = JP
 *       Set PN indicator for ARCHAIN (DW limit means small TGR).
-          IPN = 2
-          WRITE (6,40)  JP, NAME(JP), STEP(I1), STEP(I), SEMI, TGR, DW
-   40     FORMAT (' ENFORCED PERTURB    JP NM S1 SI A TGR DW ',
-     &                                  2I6,1P,5E10.2)
+*         IPN = 2
+*         WRITE (6,40)  JP, NAME(JP), STEP(I1), STEP(I), SEMI, TGR, DW
+*  40     FORMAT (' ENFORCED PERTURB    JP NM S1 SI A TGR DW ',
+*    &                                  2I6,1P,5E10.2)
           GO TO 100
       END IF
 *

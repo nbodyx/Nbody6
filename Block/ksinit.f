@@ -150,7 +150,6 @@
           END IF
           T0(ICM) = TIME
           T0R(ICM) = TIME
-          TNEW(ICM) = TIME + STEP(ICM)
 *
 *       Form force components and first derivatives for c.m.
           DO 170 K = 1,3
@@ -176,6 +175,9 @@
               FDIRR = FDIRR + D1R(K,ICM)**2
   175     CONTINUE
           DT = ETAR*SQRT(FIRR/FDIRR)
+          VI2 = XDOT(1,ICM)**2 + XDOT(2,ICM)**2 + XDOT(3,ICM)**2
+          DT0 = 0.5*RS(ICM)/SQRT(VI2)
+          DT = MIN(DT0,DT)
           CALL STEPK(DT,DTN)
           STEPR(ICM) = DTN
           ITER = 0
@@ -185,6 +187,8 @@
               IF (ITER.LT.16.OR.STEPR(ICM).GT.DTK(40)) GO TO 180
               STEPR(ICM) = DTK(40)
           END IF
+          STEP(ICM) = MIN(STEP(ICM),STEPR(ICM))
+          TNEW(ICM) = TIME + STEP(ICM)
       END IF
 *
 *       Skip KS initialization at merger termination (H, U & UDOT in RESET).

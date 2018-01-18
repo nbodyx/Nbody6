@@ -12,31 +12,33 @@
      &   XCDUM(NMX3),WCDUM(NMX3),MC(NMX),
      &   XI(NMX3),VI(NMX3),MASS,RINV(NMXm),RSUM,INAME(NMX),NN
       COMMON/ARCHAIN2/ MMIJ,CMX(3),CMV(3),ENERGY,EnerGR,CHTIME
-      common/TIMECOMMON/Taika,timecomparison
       COMMON/CHAINC/  XC(3,NCMAX),UC(3,NCMAX),BODYC(NCMAX),ICH,
      &                LISTC(LMAX)
       COMMON/CLUMP/   BODYS(NCMAX,5),T0S(5),TS(5),STEPS(5),RMAXS(5),
      &                NAMES(NCMAX,5),ISYS(5)
+      COMMON/CHREG/   TIMEC,TMAX,RMAXC,CM(10),NAMEC(NMX),
+     &                NSTEP1,KZ27,KZ30
+      COMMON/POSTN/  CVEL,TAUGR,RZ1,GAMMAZ,TKOZ,EMAX,TSP,KZ24,IGR,IPN
         REAL*8 ACC(NMX3),dx(3)
         SAVE
 *
 c       HERE ONE MUST EVALUATE THE ACCELERATIONS DUE TO THE PERTURBERS.
-C       Physical positions and velocities (in the inertial coordinate)
-C       system are in vectors X and V
+C       Physical positions and velocities in the inertial coordinate
+C       system are in vectors X and V.
 C       (X(1)=X_1,X(2)=Y_1,X(3)=Z_1, X(4)=X_2, X(5)=Y_2,...)
-C       After a call to this routine the EXAccerations
+C       After a call to this routine the EXAccellerations
 C       are assumed to be in the vector ACC.
 *
         TIME0 = TIME
-        TIME = Taika + CHTIME ! this is the time to be used for prediction.
-c                         ! chtime is measured from beginning of CHAIN call.
-        TIME = TIME + T0S(1)
+        TX = TSP - TOFF + TIMEC
+        TIME = TX + CHTIME ! this is the time to be used for predictions.
 *       Predict perturbers, c.m. and resolve chain members.
         CALL XCPRED(1)
         DO I=1,3*NN
-        ACC(I)=0
+            ACC(I)=0
         END DO
-*       if(1.eq.1) return ! NO PERTURBATINS
+        IF (LISTC(1).EQ.0) RETURN
+*       if(1.eq.1) return ! NO PERTURBATIONS
 *
         NPC = LISTC(1) + 1
 *       IT = 0

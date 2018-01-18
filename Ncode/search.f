@@ -108,9 +108,9 @@
 *       Evaluate vectorial perturbation due to the close bodies.
       CALL FPERT(I,JCOMP,NCLOSE,PERT)
 *
-*       Accept #I & JCOMP if the relative motion is dominant (GI < 0.10).
+*       Accept #I & JCOMP if the relative motion is dominant (GI < 0.01).
       GI = PERT*RJMIN2/BCM
-      IF (GI.GT.0.10) THEN
+      IF (GI.GT.0.01) THEN
 *         IF (KZ(4).GT.0.AND.TIME-TLASTT.GT.4.44*TCR/FLOAT(N))
 *    &                                             CALL EVOLVE(JCOMP,0)
           GO TO 10

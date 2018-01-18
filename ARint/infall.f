@@ -1,6 +1,5 @@
       SUBROUTINE INFALL(IBH,IESC,NBH2,ISUB)
 *
-*
 *       Disruption of star by BH.
 *       -------------------------
 *
@@ -19,9 +18,10 @@
      &                NAMES(NCMAX,5),ISYS(5)
       COMMON/CCOLL2/  QK(NMX4),PK(NMX4),RIK(NMX,NMX),SIZE(NMX),VSTAR1,
      &                ECOLL1,RCOLL,QPERI,ISTAR(NMX),ICOLL,ISYNC,NDISS1
+      COMMON/ARZERO/  ISTAR0(NMX),SIZE0(NMX)
       COMMON/POSTN2/  SEMIGR,ECCGR,DEGR,ISPIN
       COMMON/INCOND/  X4(3,NMX),XDOT4(3,NMX)
-      REAL*8  G0(3),RVEC(3),VVEC(3)
+      REAL*8  RVEC(3),VVEC(3)
 *
 *
 *       Copy chain variables to standard form.
@@ -33,6 +33,12 @@
               XDOT4(K,L) = VCH(LK)
     1     CONTINUE
     4 CONTINUE
+*
+*       Ensure c.m. values of X & XDOT are updated (just in case; 05/16).
+      DO 2 K = 1,3
+          X(K,ICH) = X0(K,ICH)
+          XDOT(K,ICH) = X0DOT(K,ICH)
+    2 CONTINUE
 *
 *       Obtain original c.m. kinetic energy.
       ZK1 = 0.0
@@ -62,6 +68,7 @@
 *
 *       Ensure largest stellar type and reduce membership.
       ISTAR(LX) = MAX(ISTAR(IBH),ISTAR(IESC))
+      ISTAR0(LX) = ISTAR(LX)
       NCH = NCH - 1
       NN = NCH
 *
@@ -136,16 +143,17 @@
 *         WRITE (6,45)  RVEC, RIJ, ANEW, VA2, VI2
 *  45     FORMAT (' INFALL TRANSF    RVEC R A VA2 VI2 ',1P,7E10.2)
       ELSE
-*       Implement complete swallowing of compact star.
+*       Implement complete swallowing of compact star or BH.
           M(LX) = M(LX) + M(IESC)
           BODYC(LX) = BODYC(LX) + M(IESC)
           NCOLL = NCOLL + 1
           WRITE (6,50)  NAMEC(IESC), ISTAR(IESC), BODYC(IESC)*SMU,
      &                  M(LX)*SMU
-   50     FORMAT (' SWALLOWED STAR    NAMC K* M1 M2 ',I6,I4,2F7.2)
+   50     FORMAT (' SWALLOWED STAR/BH    NAMC K* M1 M2 ',I6,I4,2F7.2)
           NDISR = NDISR + 1
           WRITE (24,25)  TIME+TOFF, NDISR, NAMEC(IESC), ISTAR(IESC),
      &                   ECCGR, BODYC(IESC)*SMU, M(LX)*SMU, SEMIGR
+          CALL FLUSH(24)
       END IF
 *
 *       Check possible reduction of dominant body index.
@@ -156,17 +164,23 @@
       DO 55 J = IFIRST,NTOT
           IF (NAME(J).EQ.NAMEC(IESC).OR.NAME(J).EQ.0) THEN
               I = J
+*       Exit on first identification (bug fix 9/16; next bit was also wrong).
+              IF (NAME(I).EQ.NAMEC(IESC)) GO TO 58
           END IF
    55 CONTINUE
 *
 *       Switch to NAMEC(IBH) in case NAMEC(IESC) is current c.m. (rare case).
-      IF (I.EQ.ICH) THEN
+   58 IF (I.EQ.ICH) THEN
           ICH0 = ICH
 *       Restore NAME(ICH) and search for NAME(IBH) as new c.m.
           NAME(I) = NAME0
           DO 60 J = IFIRST,N
               IF (NAME(J).EQ.NAMEC(IBH)) THEN
                   ICH = J
+              END IF
+*       Determine new global index of disrupted star.
+              IF (NAME(J).EQ.NAMEC(IESC)) THEN
+                  I = J
               END IF
    60     CONTINUE
 *       Save new NAME(ICH) and copy BODYC(IBH) & c.m. variables to ICH.
@@ -181,7 +195,7 @@
 *
 *       Define M(IESC) as ghost (partial or complete swallowing).
       CALL GHOST(I)
-*       Ensure escape condition (R**2 < 1D+10).
+*       Ensure escape condition is satisfied (R**2 < 1D+10).
       X0(1,I) = 1.0D+04
       X(1,I) = 1.0D+04
 *
@@ -193,6 +207,8 @@
           NAMEC(L) = NAMEC(L+1)
           SIZE(L) = SIZE(L+1)
           ISTAR(L) = ISTAR(L+1)
+          SIZE0(L) = SIZE0(L+1)
+          ISTAR0(L) = ISTAR0(L+1)
           BODYS(L,ISUB) = BODYS(L+1,ISUB)
           NAMES(L,ISUB) = NAMES(L+1,ISUB)
           DO 64 K = 1,3
@@ -260,7 +276,6 @@
       DO 120 K = 1,3
           ZK2 = ZK2 + XDOT(K,ICH)**2
   120 CONTINUE
-*       Note XDOT(ICH) = 0.0 at 10/7 test which has small energy error.
       ZK2 = 0.5*BODY(ICH)*ZK2
 *
 *       Add c.m. kinetic energy change for conservation.
@@ -268,9 +283,6 @@
 *
 *       Re-initialize force polynomials.
       TIME = TBLOCK
-      DO 125 K = 1,3
-          X0DOT(K,ICH) = XDOT(K,ICH)   ! Note zero velocity bug.
-  125 CONTINUE
       CALL FPOLY1(ICH,ICH,0)
       CALL FPOLY2(ICH,ICH,0)
 *

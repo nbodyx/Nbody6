@@ -54,24 +54,33 @@
           NIJ = 0
 *
 *       See whether any neighbours need to be renamed.
-          K1 = 1
-          DO 25 L = 2,NNB+1
-              IF (LIST(L,J).GT.JCOMP) GO TO 30
-*       Start search loop above last identified value (bug fix 10/07).
-              DO 20 K = K1,4
-                  IF (LIST(L,J).EQ.ILIST(K)) THEN
-                      K1 = K + 1
-                      NNB1 = NNB1 + 1
+          IF (NNB.EQ.0) GO TO 30
+          LL = 2
+          DO 25 K = 1,4
+              IK = ILIST(K)
+              LR = NNB + 1
+              IF (IK.LT.LIST(LL,J)) GO TO 25
+              IF (IK.GT.LIST(LR,J)) GO TO 30
+*       Binary search
+   20         IF (LL.GT.LR) GO TO 25
+              LC = (LL+LR)/2
+              JC = LIST(LC,J)
+              IF (JC.LT.IK) THEN
+                  LL = LC + 1
+                  GO TO 20
+              ELSEIF (JC.GT.IK) THEN
+                  LR = LC - 1
+                  GO TO 20
+              ELSE
+                  NNB1 = NNB1 + 1
 *       Save corresponding list location for the modification loop.
-                      JLIST(NNB1) = K
-                      JLIST(NNB1+4) = L
+                  JLIST(NNB1) = K
+                  JLIST(NNB1+4) = LC
 *       Count number of identified KS components.
-                      IF (ILIST(K).EQ.ICOMP.OR.ILIST(K).EQ.JCOMP)
-     &                                                     NIJ = NIJ + 1
-*       Advance neighbour list after each identification (note duplicity).
-                      GO TO 25
-                  END IF
-   20         CONTINUE
+                  IF (IK.EQ.ICOMP.OR.IK.EQ.JCOMP) NIJ = NIJ + 1
+                  IF (LC.EQ.NNB+1) GO TO 30
+                  LL = LC + 1
+              ENDIF
    25     CONTINUE
 *
 *       Skip modification if no neighbours need to be renamed.

@@ -236,7 +236,7 @@
               KSTAR(I) = 0
               CALL XVPRED(I,0)
               KSPAIR = IPAIR
-              CALL CMBODY(R(IPAIR),2)
+*             CALL CMBODY(R(IPAIR),2)
               DMR = -1.0
               GO TO 30
           END IF
