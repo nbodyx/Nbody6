@@ -95,7 +95,7 @@
    20 CONTINUE
 *
 *       Predict current coordinates & velocities to F3DOT before termination.
-*     CALL XVPRED(ICM,-1)
+      CALL XVPRED(ICM,-1)
 *
 *       Copy c.m. coordinates & velocities.
       DO 25 K = 1,3

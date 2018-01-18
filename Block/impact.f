@@ -68,6 +68,9 @@
           END IF
    10 CONTINUE
 *
+*       Quit search for unperturbed KS with JCL > N (binary pert not checked).
+      IF (LIST(1,I1).EQ.0.AND.JCL.GT.N) GO TO 100
+*
 *       Perform an iteration to ensure at least two perturbers (< 10 times).
       IF (NP.LT.2) THEN
           RCRIT2 = 4.0*RCRIT2

@@ -51,8 +51,9 @@
    30 CONTINUE
       IF (JCLOSE.EQ.0) GO TO 50
       IF (RY2.GT.25.0*RMIN2) GO TO 50
-*     IF (JCLOSE.GT.N) GO TO 50              ! JCLOSE > N is experimental.
+      IF (JCLOSE.GT.N) GO TO 50              ! JCLOSE > N is experimental.
 *
+*       Currently under investigation.
       WRITE (6,40)  TIME+TOFF, NSTEP1, NN, NPERT, NAME(JCLOSE),
      &              BODY(JCLOSE)/BODY(ICH), SQRT(RY2), GPERT,1.0/RINV(1)
    40 FORMAT (/,' CHAIN INJECT    T # NN NP NM MJ/MI RY GP RB ',

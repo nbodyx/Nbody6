@@ -362,6 +362,10 @@
 *             GA = GI*A0*A0*A0
 *             IF (GA.GT.0.25.AND.RI.GT.SEMI) IQ = .TRUE.
               IF (RI.GT.10*RMIN.AND.NNB0.GT.0.8*LIST(1,I)) IQ = .TRUE.
+*       Delay termination for massive system with small perturbation.
+              IF (GI.LT.3.0D-03.AND.BODY(I).GT.20.0*BODYM) IQ = .FALSE.
+              IF (GI.GT.0.1.AND.RI.GT.RMIN) IQ = .TRUE.
+*             IF (GI.GT.0.01) IQ = .TRUE.
 *       Cancel termination for less than 10 % predicted apocentre perturbation.
               IF (IQ) THEN
                   SEMI = -0.5*BODY(I)/HI
@@ -370,8 +374,10 @@
                   RAP = SEMI*(1.0 + SQRT(ECC2))
                   IF (GI*(RAP/RI)**2.LT.0.1) IQ = .FALSE.
               END IF
+*       Delay termination for massive system with small perturbation.
+              IF (GI.LT.3.0D-03.AND.BODY(I).GT.20.0*BODYM) IQ = .FALSE.
               IF (GI.GT.0.1.AND.RI.GT.RMIN) IQ = .TRUE.
-              IF (GI.GT.0.01) IQ = .TRUE.
+*             IF (GI.GT.0.01) IQ = .TRUE.
 *       Include extra condition for planet case.
               IF (MIN(BODY(I1),BODY(I2)).LT.0.05*BODYM) THEN
                   IF (GI.GT.2.0D-04) IQ = .TRUE.

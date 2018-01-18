@@ -1159,6 +1159,12 @@ c     Ixc=1 ! 1 for exact time, 0 for not exact time
           GO TO 290
       ELSE IF (N.EQ.3) THEN
 *
+*       Terminate three-body system directly by CHTERM2 (retain old part).
+          IF (N.EQ.3) THEN
+              CALL CHTERM2(0)
+              GO TO 400
+          END IF
+*
 *       Determine most distant triple member for removal.
           R1 = 1.0/RINV(1)
           R2 = 1.0/RINV(N-1)

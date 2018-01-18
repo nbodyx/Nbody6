@@ -22,6 +22,8 @@
 *       Save regular c.m. step and form irregular time-step (cf. ADJUST).
       CMSTEP = STEPR(ICM)
       DTCL = 0.04*SQRT(R(IPAIR)**3/BODY(ICM))
+*       Switch to arbitrary small value for (CHAIN) collision.
+      IF (R(IPAIR).LT.1.0D-06) DTCL = DTMIN
 *       Include first-order prediction in regular force & derivative.
       DTR = TIME - T0R(ICM)
       DO 200 K = 1,3

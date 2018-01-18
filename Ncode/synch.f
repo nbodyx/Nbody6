@@ -164,6 +164,12 @@
           MC = 0.D0
           AGE = TIME*TSTAR - EPOCH(J1)
           CALL star(KW,M0,M1,TM,TN,TSCLS,LUMS,GB,ZPARS)
+            IF(KW.LE.6)THEN
+               AGE = MIN(AGE,0.9999D0*TSCLS(11))
+            ELSE
+               AGE = MIN(AGE,0.9999D0*TSCLS(5))
+               AGE = MIN(AGE,1.0001D0*TN)
+            ENDIF
           CALL hrdiag(M0,AGE,M1,TM,TN,TSCLS,LUMS,GB,ZPARS,
      &                RM,LUM,KW,MC,RCC,MENV,RENV,K2)
           CM(1,IC) = MC/SMU
@@ -201,11 +207,11 @@
               Q(K) = QQ(IP)
               IF (KSTAR(IK).LE.2.OR.KSTAR(IK).EQ.7) THEN
                   rg2(k) = 0.1
-	      ELSE IF (KSTAR(IK).EQ.4) THEN
+              ELSE IF (KSTAR(IK).EQ.4) THEN
                   CM(K,IC) = MIN(0.89D0*BODY(IK),CM(K,IC))
                   rg2(k)= 0.1*(1.0 - CM(K,IC)/BODY(IK))
               ELSE
-	          rg2(k)= 0.21
+                  rg2(k)= 0.21
               END IF
           END IF
           TL = TWOPI*RADIUS(IK)*SQRT(RADIUS(IK)/BODY(IK)/W(K))
@@ -220,10 +226,10 @@
           RP1 = RP(IC)/RADIUS(I1)
           rad = radius(i1)
       ELSE
-	  M21 = BODY(I1)/BODY(I2)
+          M21 = BODY(I1)/BODY(I2)
           R21 = RADIUS(I1)/RADIUS(I2)
-	  RP1 = RP(IC)/RADIUS(I2)
-	  rad = radius(i2)
+          RP1 = RP(IC)/RADIUS(I2)
+          rad = radius(i2)
       END IF
 *
 *       Define initial angular momentum from the scaled semi-major axis.
@@ -306,7 +312,7 @@
      &                                 0P,F6.1)
       CALL FLUSH(92)
       END IF
-*	Evaluate damping coefficients (Mardling & SJA, M.N. 321, 398, 2001).
+*       Evaluate damping coefficients (Mardling & SJA, M.N. 321, 398, 2001).
       cf = 54.0*twopi/5.0
       C3 = (cf/9.0)*(AT0(1)*(Q(1)/W(1))**2*M21**2)/rg2(1)/semi0**6
       C4 = (cf/9.0)*(AT0(2)*(Q(2)/W(2))**2/M21**2)*R21**6/rg2(2)/
@@ -443,6 +449,7 @@
 *       Obtain the tidal contributions from integration.
       A0 = RP0/(1.0 - ES0)
       DH = -0.5*BODY(I)*(1.0/SEMI - 1.0/A0)
+*     IF (ABS(DH).GT.0.01*ABS(IPAIR)) DH = 0.01*ABS(H(IPAIR))
 *       Prevent new SEMI < R.
       IF (H(IPAIR) + DH.LT.-0.5*BODY(I)/R(IPAIR)) THEN
           DH = -0.5*BODY(I)/R(IPAIR) - H(IPAIR)
