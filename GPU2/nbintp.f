@@ -266,7 +266,7 @@
 *       Employ Jun's criterion to avoid over-shooting (cf. Book, 2.16).
           IF (DV2.GT.0.0D0) THEN
               DTJ = STEP(I)*(1.0D-06*STEP(I)**2*F2/DV2)**0.1
-          .   TTMP = MIN(TTMP,DTJ)
+              TTMP = MIN(TTMP,DTJ)
           END IF
       END IF
       DT0 = TTMP
