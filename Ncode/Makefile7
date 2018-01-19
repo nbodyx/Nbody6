@@ -52,7 +52,9 @@ arc.f pnpert.f xtpert2.f bhstat.f bhstab.f emax1.f \
 grbin.f inject.f infall.f decorr.f chterm2.f cpertx.f cpertj.f kcpert.f \
 brake4.f ksrot.f deform2.f expand2.f renew.f \
 circ.f spinup.f \
-newton.f ksintp.f kspert2.f pnpert2.f
+newton.f ksintp.f pnpert2.f qstab.f kstran.f \
+cstab4.f cstab3.f chstab.f cstab2.f \
+jpred.f r2sort.f
 # five dummy routines in dir Ncode to enable block-step version.
 
 OBJECTS = $(SOURCE:.f=.o)
