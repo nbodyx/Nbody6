@@ -245,8 +245,10 @@
               IF (PMIN.GT.A0 + SEMI2) GO TO 30
           END IF
       END IF
-      IF (JCL.GT.N.AND.PMIN.GT.4.0*SEMIX.AND.
-     &   (ECC1.GT.0.9.AND.ECC1.LT.1.0)) GO TO 30
+      IF (JCL.GT.N) THEN
+          IF (PMIN.GT.4.0*SEMIX.AND.
+     &       (ECC1.GT.0.9.AND.ECC1.LT.1.0)) GO TO 30
+      END IF
 *
 *       Check almost stable triples (factor 1.2 is experimental).
       IF (JCL.LE.N.AND.PMIN.GT.2.5*SEMI) THEN
