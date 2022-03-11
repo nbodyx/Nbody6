@@ -314,7 +314,8 @@ struct Force{
 };
 
 struct NBlist{
-	enum{ NB_MAX = 512 + 88 };
+	// enum{ NB_MAX = 512 + 88 };
+	enum{ NB_MAX = 768 + 32 };
 	int pad[3];
 	int nnb;
 	int nb[NB_MAX];
@@ -402,7 +403,7 @@ static void gpuirr_close(){
 	const double nnb_avr = double(num_inter) / double(num_steps);
 
 	fprintf(stderr, "**************************** \n"); 
-	fprintf(stderr, "Closing GPUIRR lib. CPU ver. \n"); 
+	fprintf(stderr, "Closing GPUIRR lib. AVX ver. \n"); 
 	fprintf(stderr, "time grav  : %f sec\n", time_grav);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "perf grav  : %f Gflops\n", Gflops);

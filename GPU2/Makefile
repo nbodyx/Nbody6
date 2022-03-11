@@ -1,5 +1,5 @@
-#avx       = enable
-chainmode = archain
+avx       = enable
+#chainmode = archain
 #ksblock   = on
 
 ifeq ($(avx), enable)
@@ -27,20 +27,21 @@ else
 endif
 
 FC       = gfortran
-FFLAGS   = -O3 -Wall -march=core2
+FFLAGS   = -O3 -Wall -march=native
 CXX      = g++ 
-CXXFLAGS = -O3 -Wall -march=core2
+CXXFLAGS = -O3 -Wall -march=native
 ifeq ($(avx), enable)
-FFLAGS   += -mavx
-CXXFLAGS += -mavx
+#FFLAGS   += -mavx
+#CXXFLAGS += -mavx
 endif
 
 CUDA_PATH = /usr/local/cuda
 #SDK_PATH  = /usr/local/cuda_sdk
-SDK_PATH  = /usr/local/cuda/samples
+#SDK_PATH  = /usr/local/cuda/samples
+SDK_PATH=~/NVIDIA_CUDA-10.2_Samples/
 
 NVCC = $(CUDA_PATH)/bin/nvcc
-NVCC += -arch=sm_20 -Xptxas -v
+NVCC += -arch=sm_50 -Xptxas -v
 NVCC += -I $(SDK_PATH)/common/inc
 ifeq ($(avx), enable)
 NVCC += -Xcompiler "-O3 -Wall -fopenmp -mavx"

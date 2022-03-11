@@ -6,7 +6,8 @@ FFLAGS = -Wall -O3 -ffast-math
 #FFLAGS +=  -traceback
 #FFLAGS +=  -pg
 ifeq ($(avx), enable)
-FFLAGS += -march=core2 -mavx
+#FFLAGS += -march=core2 -mavx
+FFLAGS += -march=native
 else
 FFLAGS += -march=core2
 endif
@@ -75,7 +76,7 @@ stablz.f start3.f subsys.f tperi.f trans3.f \
 quad.f derqp4.f difsy4.f endreg.f erel4.f ichain.f newreg.f newsys.f \
 qpmod4.f rchain.f rsort.f stabl4.f start4.f status.f trans4.f \
 brake4.f ksrot.f expand2.f deform2.f circ.f spinup.f kstran.f qstab.f \
-newton.f pnpert2.f
+pnpert2.f
 else
 #KS block-step version
 SOURCE = \

@@ -13,18 +13,19 @@
 
 #define NTHREAD 64 // 64 or 128
 // #define NJBLOCK 14 // for GTX 470
-#define NJBLOCK 28 // for GTX660Ti 
+// #define NJBLOCK 28 // for GTX660Ti 
+#define NJBLOCK 20 // for V100, could be 40 or 80 
 #define NIBLOCK 32 // 16 or 32 
 #define NIMAX (NTHREAD * NIBLOCK) // 2048
 
-#define NXREDUCE 32 // must be >NJBLOCK
+#define NXREDUCE 32 // must be 2^n such that >NJBLOCK
 #define NYREDUCE  8
 
 #define NNB_PER_BLOCK 256 // NNB per block, must be power of 2
 #define NB_BUF_SIZE (1<<20)
 // #define NNB_MAX       384 // total NNB at reduced
 
-#define MAX_CPU 8
+#define MAX_CPU 16
 #define MAX_GPU 4
 
 // for clearity, for myself
@@ -429,6 +430,7 @@ static double get_wtime(){
 
 static double time_send, time_grav, time_reduce;
 static long long numInter;
+static long ncall_send = 0;
 static cudaPointer <Jparticle> jpbuf[MAX_GPU];
 static cudaPointer <Iparticle> ipbuf[MAX_GPU];
 static cudaPointer <Force[NJBLOCK]> fpart[MAX_GPU];
@@ -507,6 +509,7 @@ void GPUNB_devinit(){
 void GPUNB_open(int nbmax){
 	time_send = time_grav = time_reduce = 0.0;
 	numInter = 0;
+	ncall_send = 0;
 	nbodymax = nbmax;
 
 	GPUNB_devinit();
@@ -580,6 +583,8 @@ void GPUNB_close(){
 	nbodymax = 0;
 
 #ifdef PROFILE
+	double byte_sent = (double)ncall_send * nbody * sizeof(Jparticle);
+	double GB_per_sec = byte_sent / time_send * 1.e-9;
 	fprintf(stderr, "***********************\n");
 	fprintf(stderr, "Closed NBODY6/GPU library\n");
 	fprintf(stderr, "time send   : %f sec\n", time_send);
@@ -587,6 +592,7 @@ void GPUNB_close(){
 	fprintf(stderr, "time reduce : %f sec\n", time_reduce);
 	fprintf(stderr, "time regtot : %f sec\n", time_send + time_grav + time_reduce);
 	fprintf(stderr, "%f Gflops (gravity part only)\n", 60.e-9 * numInter / time_grav);
+	fprintf(stderr, "%f GB/s for send j-particle\n", GB_per_sec);
 	fprintf(stderr, "***********************\n");
 #endif
 }
@@ -606,6 +612,7 @@ void GPUNB_send(
 #pragma omp parallel
 	{
 		int tid = omp_get_thread_num();
+#if 0
 		if(tid < numGPU){
 			int nj = joff[tid+1] - joff[tid];
 			for(int j=0; j<nj; j++){
@@ -614,8 +621,24 @@ void GPUNB_send(
 			}
 			jpbuf[tid].htod(nj);
 		}
+#else // use all CPU cores for data packing
+		for(int ig=0; ig<numGPU; ig++){
+			int nj = joff[ig+1] - joff[ig];
+			#pragma omp for nowait
+			for(int j=0; j<nj; j++){
+				int jj = j + joff[ig];
+				jpbuf[ig][j] = Jparticle(mj[jj], xj[jj], vj[jj]);
+			}
+		}
+		#pragma omp barrier
+		if(tid < numGPU){
+			int nj = joff[tid+1] - joff[tid];
+			jpbuf[tid].htod(nj);
+		}
+#endif
 	}
 	time_send += get_wtime();
+	ncall_send++;
 }
 
 void GPUNB_regf(
