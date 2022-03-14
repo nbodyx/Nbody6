@@ -452,9 +452,9 @@ __global__ void gather_nb_kernel(
 	                                  : 0;
 
 	// now performe prefix sum
-#if 1 ||  __CUDA_ARCH__ >= 300
+#if 1 &&  __CUDA_ARCH__ >= 300
 	int ix = mynnb;
-#if NXREDUCE<=32
+#  if NXREDUCE<=32
 	#pragma unroll
 	for(int ioff=1; ioff<NXREDUCE; ioff*=2){
 		int iy = __shfl_up(ix, ioff);
@@ -462,7 +462,7 @@ __global__ void gather_nb_kernel(
 	}
 	int iz = __shfl_up(ix, 1);
 	const int off = (xid == 0) ? 0 : iz;
-#else
+#  else
 	#pragma unroll
 	for(int ioff=1; ioff<32; ioff*=2){
 		int iy = __shfl_up(ix, ioff);
@@ -492,18 +492,39 @@ __global__ void gather_nb_kernel(
 #        error // up to NXREDUCE=128 is supported
 #    endif
 	const int off = (xid == 0) ? 0 : ish[xid-1];
-#endif
+#  endif
 #else
+	// version without shfl, doesn't work for NXREDUCE is 64 or 128
 	__shared__ int ishare[NYREDUCE][NXREDUCE];
 	ishare[yid][xid] = mynnb;
 	volatile int *ish = ishare[yid];
+#  if NXREDUCE>=64
+	__syncthreads();
+	if(xid>=1)  ish[xid] += ish[xid-1];
+	__syncthreads();
+	if(xid>=2)  ish[xid] += ish[xid-2];
+	__syncthreads();
+	if(xid>=4)  ish[xid] += ish[xid-4];
+	__syncthreads();
+	if(xid>=8)  ish[xid] += ish[xid-8];
+	__syncthreads();
+	if(xid>=16)  ish[xid] += ish[xid-16];
+	__syncthreads();
+	if(xid>=32)  ish[xid] += ish[xid-32];
+	__syncthreads();
+#    if NXREDUCE>=128
+	if(xid>=64)  ish[xid] += ish[xid-64];
+	__syncthreads();
+#    endif
+#  else
 	if(xid>=1)  ish[xid] += ish[xid-1];
 	if(xid>=2)  ish[xid] += ish[xid-2];
 	if(xid>=4)  ish[xid] += ish[xid-4];
 	if(xid>=8)  ish[xid] += ish[xid-8];
-#if NXREDUCE>=32
+#    if NXREDUCE>=32
 	if(xid>=16)  ish[xid] += ish[xid-16];
-#endif
+#    endif
+#  endif
 	const int off = (xid == 0) ? 0 
 	                           : ish[xid-1];
 #endif
