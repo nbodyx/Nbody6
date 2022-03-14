@@ -15,7 +15,7 @@
 // #define NJBLOCK 14 // for GTX 470
 // #define NJBLOCK 28 // for GTX660Ti 
 
-#if 1 // V100?
+#if 0 // V100?
 #  define NJBLOCK  120
 #  define NXREDUCE 128
 #elif 1 // P100?
@@ -348,6 +348,7 @@ __global__ void force_reduce_kernel(
 		warp_reduce_float8(tmp1, tmp2, dst);
 		warp_reduce_int(itmp, idst);
 #    if NXREDUCE==64
+		__syncthreads();
 		if(0 == threadIdx.x){
 			Force fout = fs[0];
 			fout += fs[1];
