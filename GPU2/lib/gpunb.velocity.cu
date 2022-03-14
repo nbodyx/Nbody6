@@ -14,11 +14,19 @@
 #define NTHREAD 64 // 64 or 128
 // #define NJBLOCK 14 // for GTX 470
 // #define NJBLOCK 28 // for GTX660Ti 
-#define NJBLOCK 20 // for V100, could be 40 or 80 
+
+#if 1
+#  define NJBLOCK  40 // for V100, could be 40 or 80 
+#  define NXREDUCE 64 // must be 2^n such that >NJBLOCK
+#else
+#  define NJBLOCK  28 // for V100, could be 40 or 80 
+#  define NXREDUCE 32 // must be 2^n such that >NJBLOCK
+#endif
+
 #define NIBLOCK 32 // 16 or 32 
 #define NIMAX (NTHREAD * NIBLOCK) // 2048
 
-#define NXREDUCE 32 // must be 2^n such that >NJBLOCK
+// #define NXREDUCE 32 // must be 2^n such that >NJBLOCK
 #define NYREDUCE  8
 
 #define NNB_PER_BLOCK 256 // NNB per block, must be power of 2
@@ -265,13 +273,17 @@ __device__ void warp_reduce_int(int inp, int *out){
 	inp += __shfl_xor(inp, 2);
 	inp += __shfl_xor(inp, 4);
 	inp += __shfl_xor(inp, 8);
-# if NXREDUCE==32
+# if NXREDUCE>=32
 	inp += __shfl_xor(inp, 16);
 # endif
 	*out = inp;
 }
 __device__ void warp_reduce_float8(float4 inp1, float4 inp2, float *out){
+#  if NXREDUCE >= 64
+	const int tid = threadIdx.x % 32;
+#  else
 	const int tid = threadIdx.x;
+#  endif
 	float4 tmp4L = (4&tid) ? inp2 : inp1;
 	float4 tmp4R = (4&tid) ? inp1 : inp2;
 	tmp4L.x += __shfl_xor(tmp4R.x, 4);
@@ -291,7 +303,7 @@ __device__ void warp_reduce_float8(float4 inp1, float4 inp2, float *out){
 	tmp2.x += __shfl_xor(tmp2.y, 1);
 
 	tmp2.x += __shfl_xor(tmp2.x, 8);
-# if NXREDUCE==32
+# if NXREDUCE>=32
 	tmp2.x += __shfl_xor(tmp2.x, 16);
 # endif
 	if(tid < 8){
@@ -309,22 +321,46 @@ __global__ void force_reduce_kernel(
 	const int bid = blockIdx.x;
 	const int iaddr = yid + blockDim.y * bid;
 
-#if __CUDA_ARCH__ >= 300
+#if 0 && __CUDA_ARCH__ >= 300
 	Force f;
 	if(xid < NJBLOCK){
 		f = fpart[iaddr][xid];
 	}else{
 		f.clear();
 	}
-# if 0
-# pragma unroll
-	for(int mask=1; mask<NXREDUCE; mask*=2){
-		f.reduce_with(mask);
+
+#  if NXREDUCE >= 64
+#   warning "experimental"
+	__shared__ Force fshare[NYREDUCE][NXREDUCE/32];
+	Force *fs = &fshare[yid][xid/32];
+	if(iaddr < ni){
+		const float4 tmp1 = make_float4(f.acc.x, f.acc.y, f.acc.z, f.pot);
+		const float4 tmp2 = make_float4(f.jrk.x, f.jrk.y, f.jrk.z, 0.0f);
+		const int    itmp = f.nnb;
+		float *dst  = &(fs->acc.x);
+		int   *idst = &(fs->nnb);
+		warp_reduce_float8(tmp1, tmp2, dst);
+		warp_reduce_int(itmp, idst);
+#    if NXREDUCE==64
+		__syncthreads();
+		if(0 == threadIdx.x){
+			Force fout = fs[0];
+			fout += fs[1];
+			ftot[iaddr] = fout;
+		}
+#    elif NXREDUCE==128
+		if(0 == threadIdx.x){
+			Force fout = fs[0];
+			fout += fs[1];
+			fout += fs[2];
+			fout += fs[3];
+			ftot[iaddr] = fout;
+		}
+#    else
+#      error
+#    endif
 	}
-	if(iaddr < ni && xid == 0){
-		ftot[iaddr] = f;
-	}
-# else
+#  else
 	if(iaddr < ni){
 		const float4 tmp1 = make_float4(f.acc.x, f.acc.y, f.acc.z, f.pot);
 		const float4 tmp2 = make_float4(f.jrk.x, f.jrk.y, f.jrk.z, 0.0f);
@@ -334,7 +370,7 @@ __global__ void force_reduce_kernel(
 		warp_reduce_float8(tmp1, tmp2, dst);
 		warp_reduce_int(itmp, idst);
 	}
-# endif
+#  endif
 #else
 	__shared__ Force fshare[NYREDUCE][NXREDUCE];
 	if(xid < NJBLOCK){
@@ -343,15 +379,28 @@ __global__ void force_reduce_kernel(
 		fshare[yid][xid].clear();
 	}
 	Force *fs = fshare[yid];
-#if NXREDUCE==32
+
+#  if NXREDUCE>=64
+	__syncthreads();
+#  endif
+#  if NXREDUCE>=128
+	if(xid < 64) fs[xid] += fs[xid + 64];
+	__syncthreads();
+#  endif
+#  if NXREDUCE>=64
+	if(xid < 32) fs[xid] += fs[xid + 32];
+	__syncthreads();
+#  endif
+#  if NXREDUCE>=32
 	if(xid < 16) fs[xid] += fs[xid + 16];
-#endif
+#  endif
 	if(xid < 8) fs[xid] += fs[xid + 8];
 	if(xid < 4) fs[xid] += fs[xid + 4];
 	if(xid < 2) fs[xid] += fs[xid + 2];
 	if(xid < 1) fs[xid] += fs[xid + 1];
 	
-	if(iaddr < ni){
+	// if(iaddr < ni){
+	if(iaddr < ni && xid==0){  // for NXREDUCE > 32
 		ftot[iaddr] = fs[0];
 	}
 #endif
@@ -378,8 +427,9 @@ __global__ void gather_nb_kernel(
 	                                  : 0;
 
 	// now performe prefix sum
-#if __CUDA_ARCH__ >= 300
+#if 1 ||  __CUDA_ARCH__ >= 300
 	int ix = mynnb;
+#if NXREDUCE<=32
 #pragma unroll
 	for(int ioff=1; ioff<NXREDUCE; ioff*=2){
 		int iy = __shfl_up(ix, ioff);
@@ -388,6 +438,33 @@ __global__ void gather_nb_kernel(
 	int iz = __shfl_up(ix, 1);
 	const int off = (xid == 0) ? 0 : iz;
 #else
+#pragma unroll
+	for(int ioff=1; ioff<32; ioff*=2){
+		int iy = __shfl_up(ix, ioff);
+		if(xid%32>=ioff) ix += iy;
+	}
+	__shared__ int ishare[NYREDUCE][NXREDUCE];
+	volatile int *ish = ishare[yid];
+	ish[xid] = ix;
+	__syncthreads();
+	if(xid >= 32){
+		ish[xid] += ish[31];
+	}
+	__syncthreads();
+#    if NXREDUCE>=128
+	if(xid >= 64){
+		ish[xid] += ish[64];
+	}
+	__syncthreads();
+	if(xid >= 96){
+		ish[xid] += ish[95];
+	}
+	__syncthreads();
+#    endif
+	int iz = (xid == 0) ? 0 : ish[xid-1];
+	const int off = (xid == 0) ? 0 : ish[xid-1];
+#endif
+#else
 	__shared__ int ishare[NYREDUCE][NXREDUCE];
 	ishare[yid][xid] = mynnb;
 	volatile int *ish = ishare[yid];
@@ -395,7 +472,7 @@ __global__ void gather_nb_kernel(
 	if(xid>=2)  ish[xid] += ish[xid-2];
 	if(xid>=4)  ish[xid] += ish[xid-4];
 	if(xid>=8)  ish[xid] += ish[xid-8];
-#if NXREDUCE==32
+#if NXREDUCE>=32
 	if(xid>=16)  ish[xid] += ish[xid-16];
 #endif
 	const int off = (xid == 0) ? 0 
@@ -407,8 +484,11 @@ __global__ void gather_nb_kernel(
 	if(xid < NJBLOCK){
 		for(int k=0; k<mynnb; k++){
 			const int nbid = (joff + jstart) + int(nbpart[iaddr][xid][k]);
-			// const int nbid = iaddr * 1000 + k;
+#if 1
 			nbdst[k] = nbid;
+#else
+			nbdst[k] = nbid + 1000000*xid;
+#endif
 		}
 	}
 }
@@ -449,7 +529,8 @@ void GPUNB_devinit(){
 	if(devinit) return;
 
 	assert(NXREDUCE >= NJBLOCK);
-	assert(NXREDUCE <= 32);
+	// assert(NXREDUCE <= 32);
+	assert(NXREDUCE <= 128);
 
 	cudaGetDeviceCount(&numGPU);
 	assert(numGPU <= MAX_GPU);
@@ -694,6 +775,15 @@ void GPUNB_regf(
 			// CUDA_SAFE_THREAD_SYNC();
 			ftot [tid].dtoh(ni);
 
+#if 0
+			// DEBUG
+			for(int i=0; i<ni; i++){
+				printf("%d %d %8.3e\n", i, ftot[0][i].nnb, ftot[0][i].acc.x);
+			}
+			fflush(stdout);
+			exit(1);
+#endif
+
 			// now make prefix sum
 			int nbsum = 0;
 			for(int i=0; i<ni; i++){
@@ -714,6 +804,23 @@ void GPUNB_regf(
 				 nboff[tid], nbpart[tid], nblist[tid]);
 			// CUDA_SAFE_THREAD_SYNC();
 			nblist[tid].dtoh(nbsum);
+#if 0
+			// DEBUG
+			for(int i=0; i<64; i++){
+				const int nnb = ftot[0][i].nnb;
+				int off = 0;
+
+				printf("%d : %d :", i, nnb);
+				for(int j=0; j<nnb; j++){
+					printf(" %d:%d", j, nblist[0][j + off]);
+				}
+				printf("\n");
+
+				off += nnb;
+			}
+			fflush(stdout);
+			exit(1);
+#endif
 		}
 	}
 
