@@ -46,6 +46,9 @@
 
 #define NAN_CHECK(val) assert((val) == (val));
 
+#define __shfl_xor(var, lane) __shfl_xor_sync(0xffff, var, lane, 32)
+#define __shfl_up(var, lane) __shfl_up_sync(0xffff, var, lane, 32)
+
 typedef unsigned short uint16;
 
 struct Jparticle{
