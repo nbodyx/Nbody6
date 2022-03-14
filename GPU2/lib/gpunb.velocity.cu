@@ -494,29 +494,20 @@ __global__ void gather_nb_kernel(
 	const int off = (xid == 0) ? 0 : ish[xid-1];
 #  endif
 #else
-	// version without shfl, doesn't work for NXREDUCE is 64 or 128
+	// version without shfl
 	__shared__ int ishare[NYREDUCE][NXREDUCE];
 	ishare[yid][xid] = mynnb;
 	volatile int *ish = ishare[yid];
 #  if NXREDUCE>=64
 	__syncthreads();
-	if(xid>=1)  ish[xid] += ish[xid-1];
-	__syncthreads();
-	if(xid>=2)  ish[xid] += ish[xid-2];
-	__syncthreads();
-	if(xid>=4)  ish[xid] += ish[xid-4];
-	__syncthreads();
-	if(xid>=8)  ish[xid] += ish[xid-8];
-	__syncthreads();
-	if(xid>=16)  ish[xid] += ish[xid-16];
-	__syncthreads();
-	if(xid>=32)  ish[xid] += ish[xid-32];
-	__syncthreads();
-#    if NXREDUCE>=128
-	if(xid>=64)  ish[xid] += ish[xid-64];
-	__syncthreads();
-#    endif
-#  else
+	for(int off=1; off<NXREDUCE; off*=2){
+		int itmp = 0;
+		if(xid>=off) itmp = ish[xid-off];
+		__syncthreads();
+		if(xid>=off) ish[xid] += itmp;
+		__syncthreads();
+	}
+#  else // warp synchronous version
 	if(xid>=1)  ish[xid] += ish[xid-1];
 	if(xid>=2)  ish[xid] += ish[xid-2];
 	if(xid>=4)  ish[xid] += ish[xid-4];
