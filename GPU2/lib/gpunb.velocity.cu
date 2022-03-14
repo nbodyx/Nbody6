@@ -15,12 +15,15 @@
 // #define NJBLOCK 14 // for GTX 470
 // #define NJBLOCK 28 // for GTX660Ti 
 
-#if 1
-#  define NJBLOCK  40 // for V100, could be 40 or 80 
-#  define NXREDUCE 64 // must be 2^n such that >NJBLOCK
-#else
-#  define NJBLOCK  28 // for V100, could be 40 or 80 
-#  define NXREDUCE 32 // must be 2^n such that >NJBLOCK
+#if 1 // V100?
+#  define NJBLOCK  120
+#  define NXREDUCE 128
+#elif 1 // P100?
+#  define NJBLOCK  56
+#  define NXREDUCE 64
+#else // safe version
+#  define NJBLOCK  28
+#  define NXREDUCE 32
 #endif
 
 #define NIBLOCK 32 // 16 or 32 
@@ -430,7 +433,7 @@ __global__ void gather_nb_kernel(
 #if 1 ||  __CUDA_ARCH__ >= 300
 	int ix = mynnb;
 #if NXREDUCE<=32
-#pragma unroll
+	#pragma unroll
 	for(int ioff=1; ioff<NXREDUCE; ioff*=2){
 		int iy = __shfl_up(ix, ioff);
 		if(xid>=ioff) ix += iy;
@@ -438,7 +441,7 @@ __global__ void gather_nb_kernel(
 	int iz = __shfl_up(ix, 1);
 	const int off = (xid == 0) ? 0 : iz;
 #else
-#pragma unroll
+	#pragma unroll
 	for(int ioff=1; ioff<32; ioff*=2){
 		int iy = __shfl_up(ix, ioff);
 		if(xid%32>=ioff) ix += iy;
@@ -447,21 +450,23 @@ __global__ void gather_nb_kernel(
 	volatile int *ish = ishare[yid];
 	ish[xid] = ix;
 	__syncthreads();
+#    if NXREDUCE==64
 	if(xid >= 32){
 		ish[xid] += ish[31];
 	}
 	__syncthreads();
-#    if NXREDUCE>=128
+#    elif NXREDUCE==128
+	if(xid%64 >= 32){
+		ish[xid] += ish[(xid/32*32)-1];
+	}
+	__syncthreads();
 	if(xid >= 64){
-		ish[xid] += ish[64];
+		ish[xid] += ish[63];
 	}
 	__syncthreads();
-	if(xid >= 96){
-		ish[xid] += ish[95];
-	}
-	__syncthreads();
+#    else
+#        error
 #    endif
-	int iz = (xid == 0) ? 0 : ish[xid-1];
 	const int off = (xid == 0) ? 0 : ish[xid-1];
 #endif
 #else
@@ -778,7 +783,7 @@ void GPUNB_regf(
 #if 0
 			// DEBUG
 			for(int i=0; i<ni; i++){
-				printf("%d %d %8.3e\n", i, ftot[0][i].nnb, ftot[0][i].acc.x);
+				printf("%d %d %10.4e\n", i, ftot[0][i].nnb, ftot[0][i].acc.x);
 			}
 			fflush(stdout);
 			exit(1);
@@ -812,7 +817,8 @@ void GPUNB_regf(
 
 				printf("%d : %d :", i, nnb);
 				for(int j=0; j<nnb; j++){
-					printf(" %d:%d", j, nblist[0][j + off]);
+					// printf(" %d:%d", j, nblist[0][j + off]);
+					printf(" %d", nblist[0][j + off]);
 				}
 				printf("\n");
 
