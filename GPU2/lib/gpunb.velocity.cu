@@ -324,7 +324,7 @@ __global__ void force_reduce_kernel(
 	const int bid = blockIdx.x;
 	const int iaddr = yid + blockDim.y * bid;
 
-#if 0 && __CUDA_ARCH__ >= 300
+#if 1 && __CUDA_ARCH__ >= 300
 	Force f;
 	if(xid < NJBLOCK){
 		f = fpart[iaddr][xid];
@@ -345,25 +345,29 @@ __global__ void force_reduce_kernel(
 		warp_reduce_float8(tmp1, tmp2, dst);
 		warp_reduce_int(itmp, idst);
 #    if NXREDUCE==64
-		__syncthreads();
 		if(0 == threadIdx.x){
 			Force fout = fs[0];
 			fout += fs[1];
 			ftot[iaddr] = fout;
 		}
 #    elif NXREDUCE==128
+		__syncthreads();
 		if(0 == threadIdx.x){
-			Force fout = fs[0];
-			fout += fs[1];
-			fout += fs[2];
-			fout += fs[3];
-			ftot[iaddr] = fout;
+			Force f01 = fs[0];
+			f01 += fs[1];
+
+			Force f23 = fs[2];
+			f23 += fs[3];
+
+			f01 += f23;
+
+			ftot[iaddr] = f01;
 		}
 #    else
 #      error
 #    endif
 	}
-#  else
+#  else // 32 thread version
 	if(iaddr < ni){
 		const float4 tmp1 = make_float4(f.acc.x, f.acc.y, f.acc.z, f.pot);
 		const float4 tmp2 = make_float4(f.jrk.x, f.jrk.y, f.jrk.z, 0.0f);
@@ -374,7 +378,7 @@ __global__ void force_reduce_kernel(
 		warp_reduce_int(itmp, idst);
 	}
 #  endif
-#else
+#else // usual shared memory version
 	__shared__ Force fshare[NYREDUCE][NXREDUCE];
 	if(xid < NJBLOCK){
 		fshare[yid][xid] = fpart[iaddr][xid];
