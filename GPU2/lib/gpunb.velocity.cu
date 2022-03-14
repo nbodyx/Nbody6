@@ -16,7 +16,7 @@
 // #define NJBLOCK 28 // for GTX660Ti 
 
 #if 0 // V100?
-#  define NJBLOCK  120
+#  define NJBLOCK   80
 #  define NXREDUCE 128
 #elif 1 // P100?
 #  define NJBLOCK  56
@@ -30,7 +30,7 @@
 #define NIMAX (NTHREAD * NIBLOCK) // 2048
 
 // #define NXREDUCE 32 // must be 2^n such that >NJBLOCK
-#define NYREDUCE  8
+#define NYREDUCE  (256/NXREDUCE)
 
 #define NNB_PER_BLOCK 256 // NNB per block, must be power of 2
 #define NB_BUF_SIZE (1<<20)

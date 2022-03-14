@@ -265,7 +265,7 @@ _ZL11gpuirr_firriPdS_:
 	vunpcklps	%ymm12, %ymm2, %ymm12
 	vsubps	%ymm24, %ymm12, %ymm12
 	vfmadd231ps	%ymm4, %ymm4, %ymm1
-	vrsqrtps	%ymm1, %ymm0
+	vrsqrt14ps	%ymm1, %ymm0
 	vmulps	%ymm0, %ymm1, %ymm1
 	vfmadd132ps	%ymm0, %ymm25, %ymm1
 	vmulps	.LC2(%rip), %ymm0, %ymm0
@@ -605,19 +605,19 @@ gpuirr_open_:
 .L24:
 	.cfi_restore_state
 	movl	$_ZZL11gpuirr_openiiE19__PRETTY_FUNCTION__, %ecx
-	movl	$369, %edx
+	movl	$373, %edx
 	movl	$.LC4, %esi
 	movl	$.LC12, %edi
 	call	__assert_fail
 .L25:
 	movl	$_ZZL11gpuirr_openiiE19__PRETTY_FUNCTION__, %ecx
-	movl	$377, %edx
+	movl	$381, %edx
 	movl	$.LC4, %esi
 	movl	$.LC11, %edi
 	call	__assert_fail
 .L29:
 	movl	$_ZZL11gpuirr_openiiE19__PRETTY_FUNCTION__, %ecx
-	movl	$359, %edx
+	movl	$363, %edx
 	movl	$.LC4, %esi
 	movl	$.LC5, %edi
 	call	__assert_fail
@@ -956,7 +956,7 @@ gpuirr_set_list_:
 	.cfi_def_cfa_offset 16
 	.cfi_offset 6, -16
 	movl	$_ZZL15gpuirr_set_listiiPKiE19__PRETTY_FUNCTION__, %ecx
-	movl	$434, %edx
+	movl	$438, %edx
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register 6
 	movl	$.LC4, %esi

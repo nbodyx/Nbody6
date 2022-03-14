@@ -33,7 +33,11 @@ typedef double v4df __attribute__((vector_size(32)));
 
 static inline v8sf rsqrt_NR(const v8sf x){
 #if 1
+#ifdef __AVX512VL__
+	const v8sf y =   __builtin_ia32_rsqrt14ps256_mask (x, (v8sf)REP8(0.0f),  -1);
+#else
 	const v8sf y = __builtin_ia32_rsqrtps256(x);
+#endif
 	const v8sf c1 = REP8(-0.5f);
 	const v8sf c2 = REP8(-3.0f);
 	return (c1 * y) * (x*y*y + c2);
