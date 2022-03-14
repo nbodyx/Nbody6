@@ -15,7 +15,7 @@
 // #define NJBLOCK 14 // for GTX 470
 // #define NJBLOCK 28 // for GTX660Ti 
 
-#if 0 // V100?
+#if 1 // V100?
 #  define NJBLOCK   80
 #  define NXREDUCE 128
 #elif 1 // P100?
@@ -336,7 +336,6 @@ __global__ void force_reduce_kernel(
 	}
 
 #  if NXREDUCE >= 64
-#   warning "experimental"
 	__shared__ Force fshare[NYREDUCE][NXREDUCE/32];
 	Force *fs = &fshare[yid][xid/32];
 	if(iaddr < ni){
@@ -391,14 +390,12 @@ __global__ void force_reduce_kernel(
 	}
 	Force *fs = fshare[yid];
 
-#  if NXREDUCE>=64
-	__syncthreads();
-#  endif
 #  if NXREDUCE>=128
-	if(xid < 64) fs[xid] += fs[xid + 64];
 	__syncthreads();
+	if(xid < 64) fs[xid] += fs[xid + 64];
 #  endif
 #  if NXREDUCE>=64
+	__syncthreads();
 	if(xid < 32) fs[xid] += fs[xid + 32];
 	__syncthreads();
 #  endif

@@ -605,19 +605,19 @@ gpuirr_open_:
 .L24:
 	.cfi_restore_state
 	movl	$_ZZL11gpuirr_openiiE19__PRETTY_FUNCTION__, %ecx
-	movl	$370, %edx
+	movl	$373, %edx
 	movl	$.LC4, %esi
 	movl	$.LC12, %edi
 	call	__assert_fail
 .L25:
 	movl	$_ZZL11gpuirr_openiiE19__PRETTY_FUNCTION__, %ecx
-	movl	$378, %edx
+	movl	$381, %edx
 	movl	$.LC4, %esi
 	movl	$.LC11, %edi
 	call	__assert_fail
 .L29:
 	movl	$_ZZL11gpuirr_openiiE19__PRETTY_FUNCTION__, %ecx
-	movl	$360, %edx
+	movl	$363, %edx
 	movl	$.LC4, %esi
 	movl	$.LC5, %edi
 	call	__assert_fail
@@ -956,7 +956,7 @@ gpuirr_set_list_:
 	.cfi_def_cfa_offset 16
 	.cfi_offset 6, -16
 	movl	$_ZZL15gpuirr_set_listiiPKiE19__PRETTY_FUNCTION__, %ecx
-	movl	$435, %edx
+	movl	$438, %edx
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register 6
 	movl	$.LC4, %esi
