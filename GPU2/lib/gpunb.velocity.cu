@@ -51,6 +51,23 @@
 
 typedef unsigned short uint16;
 
+#if 1
+typedef float  v4sf __attribute__((vector_size(16)));
+typedef float  v8sf __attribute__((vector_size(32)));
+typedef double v4df __attribute__((vector_size(32)));
+static v8sf make_Jparticle_v8sf(double mj, double xj[3], double vj[3]){
+	v4df xmj = {xj[0], xj[1], xj[2], mj};
+	v4df vvj = {vj[0], vj[1], vj[2], 0.0};
+	v4sf xf = __builtin_ia32_cvtpd2ps256(xmj);
+	v4sf vf = __builtin_ia32_cvtpd2ps256(vvj);
+
+	v8sf p = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, };
+	p = __builtin_ia32_vinsertf128_ps256(p, xf, 0);
+	p = __builtin_ia32_vinsertf128_ps256(p, vf, 1);
+	return p;
+}
+#endif
+
 struct Jparticle{
 	float3 pos;
 	float  mass;
@@ -463,6 +480,8 @@ __global__ void gather_nb_kernel(
 #    elif NXREDUCE==128
 	if(xid%64 >= 32){
 		ish[xid] += ish[(xid/32*32)-1];
+		// s[32:63]  += s[31]
+		// s[96:127] += s[95]
 	}
 	__syncthreads();
 	if(xid >= 64){
@@ -470,7 +489,7 @@ __global__ void gather_nb_kernel(
 	}
 	__syncthreads();
 #    else
-#        error
+#        error // up to NXREDUCE=128 is supported
 #    endif
 	const int off = (xid == 0) ? 0 : ish[xid-1];
 #endif
@@ -496,7 +515,7 @@ __global__ void gather_nb_kernel(
 			const int nbid = (joff + jstart) + int(nbpart[iaddr][xid][k]);
 #if 1
 			nbdst[k] = nbid;
-#else
+#else // for debug
 			nbdst[k] = nbid + 1000000*xid;
 #endif
 		}
@@ -715,10 +734,15 @@ void GPUNB_send(
 #else // use all CPU cores for data packing
 		for(int ig=0; ig<numGPU; ig++){
 			int nj = joff[ig+1] - joff[ig];
+			Jparticle *jg = &jpbuf[ig][0];
 			#pragma omp for nowait
 			for(int j=0; j<nj; j++){
 				int jj = j + joff[ig];
+				#if 0
 				jpbuf[ig][j] = Jparticle(mj[jj], xj[jj], vj[jj]);
+				#else
+				*(v8sf *)(jg+j) = make_Jparticle_v8sf(mj[jj], xj[jj], vj[jj]);
+				#endif
 			}
 		}
 		#pragma omp barrier
